@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nueva Contraseña</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/recuperar.css') }}">
+</head>
+<body>
+
+    <div class="nueva-contrasena-container">
+        <h2>Establecer Nueva Contraseña</h2>
+        <form method="POST">
+            <div class="input-group">
+                <label for="nueva_contrasena">Nueva contraseña</label>
+                <input type="password" id="nueva_contrasena" name="nueva_contrasena" required>
+            </div>
+            <button type="submit">Cambiar contraseña</button>
+        </form>
+    </div>
+
+</body>
+</html>

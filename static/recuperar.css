@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css?family=Quicksand:400,500,700');
+
+html, body {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Quicksand", sans-serif;
+    font-size: 62.5%;
+    background-image: url(imagenes/352993-admin.jpg);
+    background-size: cover;
+    background-position: center;
+    color: #fff;
+}
+
+/* Contenedor principal */
+.recuperar-container {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 40px;
+    background-color: rgba(255, 255, 255, 0.8); /* Fondo blanco semi-transparente */
+    border-radius: 20px;
+    box-shadow: 0px 0px 20px 0px rgba(0, 0, 0, 0.1);
+}
+
+.recuperar-container h2 {
+    text-align: center;
+    color: #037903; /* Color verde */
+    font-size: 2.8rem;
+    margin-bottom: 30px;
+}
+
+/* Estilos para el formulario */
+.recuperar-container form {
+    text-align: center;
+}
+
+.input-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #111111; /* Texto oscuro */
+    font-size: 2rem;
+}
+
+.input-group input[type="email"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    font-size: 1.8rem;
+    background-color: #fff;
+    color: #111;
+}
+
+/* Botón de enviar código */
+button[type="submit"] {
+    width: 100%;
+    padding: 10px;
+    background-color: #037903;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 2rem;
+    transition: background-color 0.3s ease;
+}
+
+button[type="submit"]:hover {
+    background-color: #049410;
+}
+
+/* Responsive */
+@media screen and (max-width: 768px) {
+    .recuperar-container {
+        max-width: 90%;
+    }
+}

@@ -1,0 +1,22 @@
+<!-- templates/verificar_codigo.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar Código</title>
+    <link rel="stylesheet" href="../static/verificar.css">
+</head>
+<body>
+
+    <div class="verificar-container">
+        <h2>Verificar Código</h2>
+        <form method="POST" action="{{ url_for('verificar_codigo') }}">
+            <input type="email" name="correo" placeholder="Ingresa tu correo" required>
+            <input type="text" name="codigo" placeholder="Ingresa el código de recuperación" required>
+            <button type="submit">Verificar código</button>
+        </form>
+    </div>
+
+</body>
+</html>

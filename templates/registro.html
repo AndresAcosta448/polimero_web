@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro</title>
+    <link rel="stylesheet" href="static/registro.css">
+    <script>
+        function capitalizarPrimeraLetra(id) {
+            const input = document.getElementById(id);
+            input.value = input.value.charAt(0).toUpperCase() + input.value.slice(1).toLowerCase();
+        }
+
+        function validarFormulario(e) {
+            const contrasena = document.getElementById("contrasena").value;
+            if (contrasena.length < 6) {
+                alert("La contraseña debe tener al menos 6 caracteres.");
+                e.preventDefault();
+            }
+        }
+    </script>
+</head>
+<body>
+
+<div class="register-container">
+    <h2>Registrarse</h2>
+
+    <!-- Mostrar los mensajes flash (alertas) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul>
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    <form action="{{ url_for('registro') }}" method="POST" id="registerForm" onsubmit="validarFormulario(event)">
+        <div class="input-group">
+            <label for="nombre">Nombre</label>
+            <input type="text" id="nombre" name="nombre" onblur="capitalizarPrimeraLetra('nombre')" required>
+        </div>
+        <div class="input-group">
+            <label for="apellido">Apellido</label>
+            <input type="text" id="apellido" name="apellido" onblur="capitalizarPrimeraLetra('apellido')" required>
+        </div>
+        <div class="input-group">
+            <label for="correo">Correo electrónico</label>
+            <input type="email" id="correo" name="correo" required>
+        </div>
+        <div class="input-group">
+            <label for="contrasena">Contraseña</label>
+            <input type="password" id="contrasena" name="contrasena" required>
+        </div>
+        <button type="submit">Registrarse</button>
+    </form>
+
+    <div class="register-links">
+        <p><a href="{{ url_for('login') }}">¿Ya tienes cuenta? Inicia sesión</a></p>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css?family=Quicksand:400,500,700');
+
+html, body {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Quicksand", sans-serif;
+    font-size: 62.5%;
+    background-image: url(imagenes/352993-admin.jpg);
+    background-size: cover;
+}
+
+/* Formulario de registro */
+.register-container {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 40px;
+    background-color: #ffffff;
+    border: 1px solid #000000;
+    border-radius: 20px;
+    box-shadow: 0px 0px 20px 0px rgba(0, 0, 0, 0.1);
+}
+
+.register-container h2 {
+    text-align: center;
+    color: #000000;
+    font-size: 2.8rem;
+    margin-bottom: 30px;
+}
+
+#registerForm {
+    text-align: center;
+}
+
+.input-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #111111;
+    font-size: 2rem;
+}
+
+.input-group input[type="text"],
+.input-group input[type="password"] {
+    width: 95%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    font-size: 1.8rem;
+}
+
+button[type="submit"] {
+    width: 100%;
+    padding: 10px;
+    background-color: #037903;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 2rem;
+    transition: background-color 0.3s ease;
+}
+
+button[type="submit"]:hover {
+    background-color: #049410;
+}
+
+/* Enlaces extra */
+.register-links {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 1.6rem;
+}
+
+.register-links a {
+    color: #037903;
+    text-decoration: none;
+    margin: 5px;
+    display: inline-block;
+    font-size: 2rem; /* Aumentamos el tamaño de la letra */
+}
+
+.register-links a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media screen and (max-width: 768px) {
+    .register-container {
+        max-width: 90%;
+    }
+}
+/* Estilo general para las alertas */
+ul {
+    padding: 0;
+    list-style: none;
+    margin: 20px 0;
+}
+
+ul li {
+    font-size: 18px; /* Tamaño de fuente grande */
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* Alerta de error */
+ul li.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Alerta de éxito (puedes usarla para otros mensajes) */
+ul li.mensaje {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilo para cuando la alerta es destacada */
+ul li {
+    font-size: 22px; /* Aumentar el tamaño de la fuente para hacerla más llamativa */
+    background: linear-gradient(to right, #ff416c, #ff4b2b);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin: 15px 0;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    font-weight: bold;
+    text-align: center;
+    transition: transform 0.3s ease-in-out;
+}
+
+ul li:hover {
+    transform: scale(1.05); /* Efecto de escala cuando el cursor pasa sobre la alerta */
+}

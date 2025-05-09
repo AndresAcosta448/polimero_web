@@ -1,0 +1,120 @@
+<!-- templates/calculadora.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Calculadora de Polímero AggreBind</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='calculadora.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="logo">
+      <img src="../static/imagenes/AggreBind-White-logo (1).png" alt="Logo">
+    </div>
+    <div class="main_list">
+      <ul>
+        <li><a href="{{ url_for('notificaciones') }}"     class="btn-primary">Notificaciones</a></li>
+        <li><a href="{{ url_for('ver_cotizaciones_pendientes') }}" class="btn-primary">Cotizaciones Pendientes</a></li>
+        <li><a href="{{ url_for('logout') }}" class="btn">Cerrar sesión</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="calculadora-container">
+    <h2>Calculadora de Cotización - AggreBind</h2>
+
+    <form id="formularioCalculadora">
+      <div class="input-group">
+        <label for="largo">Largo del terreno (m):</label>
+        <input type="number" name="largo" id="largo" step="0.01" required>
+      </div>
+      <div class="input-group">
+        <label for="ancho">Ancho del terreno (m):</label>
+        <input type="number" name="ancho" id="ancho" step="0.01" required>
+      </div>
+      <div class="input-group">
+        <label for="profundidad">Profundidad del tratamiento (m):</label>
+        <input type="number" name="profundidad" id="profundidad" step="0.01" required>
+      </div>
+
+      <!-- Campos ocultos que llenará JavaScript -->
+      <input type="hidden" name="aggrebind" id="aggrebind">
+      <input type="hidden" name="agua"       id="agua">
+      <input type="hidden" name="total"      id="total">
+
+      <button type="button" id="botonCalcular" class="boton boton-cotizar">Calcular</button>
+      <button type="button" id="botonCotizacion" class="boton boton-cotizar" style="display:none;">Enviar Cotización</button>
+      <button type="button" id="botonLimpiar" class="boton boton-limpiar" style="display:none;">Limpiar</button>
+    </form>
+
+    <div id="mensaje" class="mensaje-animado resultados-grandes"></div>
+  </div>
+
+  <script>
+    function calcularDatos() {
+      const l = parseFloat(document.getElementById('largo').value),
+            a = parseFloat(document.getElementById('ancho').value),
+            p = parseFloat(document.getElementById('profundidad').value);
+      if (isNaN(l) || isNaN(a) || isNaN(p)) {
+        return alert("Completa todos los campos.");
+      }
+
+      const volumen = l * a * p,
+            poly    = volumen * 0.025,
+            water   = volumen * 0.2,
+            tot     = poly * 15000;
+
+      document.getElementById('aggrebind').value = poly.toFixed(2);
+      document.getElementById('agua').value       = water.toFixed(2);
+      document.getElementById('total').value      = tot.toFixed(2);
+
+      const msg = document.getElementById('mensaje');
+      msg.innerHTML = `
+        <p>AggreBind: <strong>${poly.toFixed(2)} L</strong></p>
+        <p>Agua: <strong>${water.toFixed(2)} L</strong></p>
+        <p>Total: <strong>$${tot.toFixed(2)}</strong></p>
+      `;
+      msg.classList.add('mostrar');
+
+      document.getElementById('botonCotizacion').style.display = 'inline-block';
+      document.getElementById('botonLimpiar').style.display    = 'inline-block';
+    }
+
+    document.getElementById('botonCalcular')
+      .addEventListener('click', calcularDatos);
+
+    document.getElementById('botonLimpiar')
+      .addEventListener('click', () => {
+        document.getElementById('formularioCalculadora').reset();
+        const msg = document.getElementById('mensaje');
+        msg.innerHTML = '';
+        msg.classList.remove('mostrar');
+        document.getElementById('botonCotizacion').style.display = 'none';
+        document.getElementById('botonLimpiar').style.display    = 'none';
+      });
+
+    document.getElementById('botonCotizacion')
+      .addEventListener('click', () => {
+        const formData = new FormData(document.getElementById('formularioCalculadora'));
+        fetch('{{ url_for("cotizar") }}', { method: 'POST', body: formData })
+          .then(r => r.json())
+          .then(res => {
+            const msg = document.getElementById('mensaje');
+            msg.classList.add('mostrar');
+            msg.innerHTML = res.success
+              ? `<p class="alert-success">${res.message}</p>`
+              : `<p class="alert-error">${res.message}</p>`;
+          })
+          .catch(() => {
+            const msg = document.getElementById('mensaje');
+            msg.classList.add('mostrar');
+            msg.innerHTML = `<p class="alert-error">Error al enviar cotización.</p>`;
+          });
+      });
+  </script>
+
+</body>
+</html>
