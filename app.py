@@ -1,19 +1,27 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+# ya no importas mysql.connector ni flask_mail aquí: lo volverás a importar después
 import mysql.connector
 from flask_mail import Mail, Message
 import random
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
-app.secret_key = 'clave_secreta_segura'
+# 1) Carga variables de tu .env en local (en Render, las lee del entorno)
+env_path = Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
-# Función para obtener conexión
+app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY', 'clave_secreta_segura')  # también puedes llevarla a .env
+
+# 2) Función para obtener conexión usando vars de entorno
 def get_db_connection():
     return mysql.connector.connect(
-        host='localhost',
-        user='root',
-        password='1234',
-        database='polimero_db'
+        host=os.getenv('DB_HOST', 'localhost'),
+        user=os.getenv('DB_USER', 'root'),
+        password=os.getenv('DB_PASS', '1234'),
+        database=os.getenv('DB_NAME', 'polimero_db')
     )
 
 # Configuración de Flask-Mail
