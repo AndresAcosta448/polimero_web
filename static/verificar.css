@@ -68,3 +68,21 @@ button[type="submit"]:hover {
         max-width: 90%;
     }
 }
+
+.register-links {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 1.6rem;
+}
+
+.register-links a {
+    color: #037903;
+    text-decoration: none;
+    margin: 5px;
+    display: inline-block;
+    font-size: 2rem;
+}
+
+.register-links a:hover {
+    text-decoration: underline;
+}

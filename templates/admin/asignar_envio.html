@@ -1,0 +1,56 @@
+{# templates/admin/asignar_envio.html #}
+{% extends "base_admin.html" %}
+
+{% block title %}Asignar Envío{% endblock %}
+{% block navbar_brand %}Asignar Envío{% endblock %}
+
+{% block content %}
+  {% for category, msg in get_flashed_messages(with_categories=true) %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+      {{ msg }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+
+  <div class="container mt-4">
+    <h2>Orden #{{ envio.id }}</h2>
+    <dl class="row mb-4">
+      <dt class="col-sm-3">Cliente:</dt>
+      <dd class="col-sm-9">{{ envio.cliente_nombre }} {{ envio.cliente_apellido }}</dd>
+
+      <dt class="col-sm-3">Polímero Necesario:</dt>
+      <dd class="col-sm-9">{{ envio.cantidad_polimero }} L</dd>
+
+      <dt class="col-sm-3">Agua Necesaria:</dt>
+      <dd class="col-sm-9">{{ envio.cantidad_agua }} L</dd>
+
+      <dt class="col-sm-3">Destino:</dt>
+      <dd class="col-sm-9">{{ envio.direccion_envio }}</dd>
+    </dl>
+
+    <form method="post" action="{{ url_for('asignar_envio_route', envio_id=envio.id) }}">
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label for="vehiculo_id" class="form-label">Vehículo</label>
+          <select id="vehiculo_id" name="vehiculo_id" class="form-select" required>
+            <option value="">-- Selecciona vehículo --</option>
+            {% for v in vehiculos %}
+              <option value="{{ v.id }}">{{ v.placa }} ({{ v.capacidad_litros }} L)</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label for="conductor_id" class="form-label">Conductor</label>
+          <select id="conductor_id" name="conductor_id" class="form-select" required>
+            <option value="">-- Selecciona conductor --</option>
+            {% for c in conductores %}
+              <option value="{{ c.id }}">{{ c.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-success">Confirmar Envío</button>
+      <a href="{{ url_for('ordenes_pendientes') }}" class="btn btn-secondary ms-2">Volver</a>
+    </form>
+  </div>
+{% endblock %}

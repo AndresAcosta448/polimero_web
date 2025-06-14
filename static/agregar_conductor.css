@@ -1,0 +1,146 @@
+:root {
+      --verde: #000000;
+      --verde-hover: #000000;
+      --blanco: #fff;
+      --gris-texto: #000000;
+      --sombra: rgba(0, 0, 0, 0.15);
+      --verde-gradiente: linear-gradient(135deg, #28a745, #28a745);
+    }
+
+    /* Fondo general */
+    body {
+      background-color: #f4f4f4;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Contenedor centrado */
+    .container-form {
+      max-width: 500px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+
+    /* Card personalizada para formulario */
+    .form-card {
+      background: var(--blanco);
+      border-radius: 12px;
+      box-shadow: 0 10px 20px var(--sombra);
+      overflow: hidden;
+      position: relative;
+      padding: 2rem;
+    }
+
+    /* Título del formulario */
+    .form-card h1 {
+      color: var(--verde);
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    /* Estilo para labels e inputs */
+    .form-card label {
+      font-size: 1rem;
+      color: var(--gris-texto);
+      margin-top: 1rem;
+      display: block;
+    }
+
+    .form-card input[type="text"] {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.3rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+      box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+      transition: border-color 0.3s ease;
+    }
+
+    .form-card input[type="text"]:focus {
+      border-color: var(--verde);
+      outline: none;
+    }
+
+    /* Estilo para mensajes flash */
+    .flash-list {
+      list-style: none;
+      padding-left: 0;
+      margin-bottom: 1rem;
+    }
+
+    .flash-list li {
+      padding: 0.5rem;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    /* Botón moderno */
+    .btn-gestionar-admins {
+      display: inline-block;
+      padding: 10px 20px;
+      margin-top: 1.5rem;
+      background: var(--verde-gradiente);
+      color: var(--blanco);
+      text-decoration: none;
+      border: none;
+      border-radius: 25px;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+
+    .btn-gestionar-admins:hover {
+      background: linear-gradient(135deg, var(--verde-hover), #28a745);
+      transform: translateY(-2px);
+    }
+
+    .btn-eliminar {
+  background-color: #dc3545;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 25px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.btn-eliminar:hover {
+  background-color: #c82333;
+  transform: translateY(-2px);
+}
+
+.flash-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1rem;
+}
+
+.flash-list li {
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.flash-list li.success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.flash-list li.danger {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.flash-list li.warning {
+  background-color: #fff3cd;
+  color: #856404;
+}

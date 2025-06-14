@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Confirmación de Pago</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='estilos_cliente.css') }}">
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background: #f9f9f9; padding: 2rem; }
+    .contenedor { max-width: 600px; margin: auto; background: #fff; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h1 { color: #28a745; margin-bottom: 1rem; }
+    p { margin: 0.5rem 0; color: #555; }
+    .destacado { font-weight: bold; color: #333; }
+    .boton-volver { 
+      display: inline-block; 
+      margin-top: 1.5rem; 
+      padding: 0.6rem 1.2rem; 
+      background: #28a745; 
+      color: #fff; 
+      text-decoration: none; 
+      border-radius: 4px; 
+      transition: background 0.3s; 
+    }
+    .boton-volver:hover { background: #218838; }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h1>¡Compra Realizada con Éxito!</h1>
+    <p>Hola <span class="destacado">{{ nombre_cliente }}</span>,</p>
+    <p>Tu compra correspondiente a la <span class="destacado">cotización #{{ cot_id }}</span> se ha completado.</p>
+    <hr>
+    <p><span class="destacado">Monto pagado:</span> ${{ "%.2f"|format(monto) }}</p>
+    <p><span class="destacado">Método de pago:</span> {{ metodo }} ({{ detalle_pago }})</p>
+    <p><span class="destacado">Dirección de envío:</span> {{ direccion }}</p>
+    <hr>
+    <p>Un administrador coordinará el envío del polímero a la brevedad.</p>
+    <p>Revisa tu correo electrónico para más detalles.</p>
+    <a href="{{ url_for('cotizaciones_habilitadas_cliente') }}" class="boton-volver">← Volver a Cotizaciones</a>
+  </div>
+</body>
+</html>

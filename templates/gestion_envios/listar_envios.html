@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Lista de Envíos</title>
+
+  <!-- Bootstrap (grid y estilos base) -->
+  <link 
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
+    rel="stylesheet"
+  >
+<link rel="stylesheet" href="{{ url_for('static', filename='listar_envios.css') }}">
+
+</head>
+<body>
+
+  <div class="d-flex">
+    {% include 'sidebar.html' %}
+    <div class="flex-fill">
+      <!-- Navbar o header si tienes -->
+      {% include 'navbar_admin.html' %}
+
+  <div class="container-list">
+    <h1>Envíos Registrados</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flash-list">
+          {% for category, msg in messages %}
+            {% if category == "danger" %}
+              {% set bg = "#f8d7da" %}
+              {% set color = "#842029" %}
+            {% elif category == "warning" %}
+              {% set bg = "#fff3cd" %}
+              {% set color = "#664d03" %}
+            {% else %}
+              {% set bg = "#d1e7dd" %}
+              {% set color = "#0f5132" %}
+            {% endif %}
+              {{ msg }}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <a href="{{ url_for('crear_envio_route') }}" class="btn-nuevo-envio">+ Crear nuevo envío</a>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Origen</th>
+          <th>Destino</th>
+          <th>Cantidad (L)</th>
+          <th>Vehículo</th>
+          <th>Conductor</th>
+          <th>Estado</th>
+          <th>Fecha creación</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in envios %}
+          <tr>
+            <td>{{ e.id }}</td>
+            <td>{{ e.origen }}</td>
+            <td>{{ e.destino }}</td>
+            <td>{{ e.cantidad_litros }}</td>
+            <td>{{ e.vehiculo_placa or "—" }}</td>
+            <td>{{ e.conductor_nombre or "—" }}</td>
+            <td>{{ e.estado }}</td>
+            <td>{{ e.fecha_creacion.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>
+              {% if e.estado == "Pendiente" %}
+                <a href="{{ url_for('asignar_envio_route', envio_id=e.id) }}" class="btn-accion">Asignar</a>
+              {% elif e.estado == "En ruta" %}
+                <form action="{{ url_for('actualizar_estado_route', envio_id=e.id) }}" method="POST" style="display:inline;">
+                  <input type="hidden" name="estado" value="Entregado">
+                  <button type="submit" class="btn-accion">Marcar Entregado</button>
+                </form>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+
+</body>
+</html>

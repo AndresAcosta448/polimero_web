@@ -1,0 +1,45 @@
+{% extends 'base_admin.html' %}
+
+{% block content %}
+<h2>Órdenes pendientes por enviar</h2>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>Cliente</th>
+      <th>Cantidad Polímero (L)</th>
+      <th>Dirección Envío</th>
+      <th>Vehículo</th>
+      <th>Conductor</th>
+      <th>Asignar</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for orden in ordenes %}
+    <tr>
+      <td>{{ orden.nombre }} {{ orden.apellido }}</td>
+      <td>{{ orden.aggrebind }}</td>
+      <td>{{ orden.direccion_envio }}</td>
+      <form method="POST" action="{{ url_for('asignar_envio_cliente') }}">
+        <input type="hidden" name="orden_id" value="{{ orden.id }}">
+        <td>
+          <select name="vehiculo_id" class="form-control" required>
+            {% for v in vehiculos %}
+              <option value="{{ v.id }}">{{ v.placa }} ({{ v.capacidad_litros }} L)</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td>
+          <select name="conductor_id" class="form-control" required>
+            {% for c in conductores %}
+              <option value="{{ c.id }}">{{ c.nombre }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td><button type="submit" class="btn btn-primary">Asignar</button></td>
+      </form>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

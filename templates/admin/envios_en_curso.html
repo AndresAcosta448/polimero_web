@@ -1,0 +1,26 @@
+{% extends 'base_admin.html' %}
+
+{% block content %}
+<h2>Envíos en curso</h2>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>Cliente</th>
+      <th>Vehículo</th>
+      <th>Conductor</th>
+      <th>Dirección</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for envio in envios %}
+    <tr>
+      <td>{{ envio.nombre }} {{ envio.apellido }}</td>
+      <td>{{ envio.placa }}</td>
+      <td>{{ envio.conductor }}</td>
+      <td>{{ envio.direccion_envio }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
