@@ -206,6 +206,14 @@ def get_usuario_correo(usuario_id):
     conn.close()
     return fila[0] if fila else None
 
+conn = mysql.connector.connect(
+    host=os.getenv('DB_HOST'),
+    port=int(os.getenv('DB_PORT')),
+    user=os.getenv('DB_USER'),
+    password=os.getenv('DB_PASSWORD'),
+    database=os.getenv('DB_NAME')
+)
+print("✅ Conectado a base:", os.getenv('DB_NAME'))
 
 #  CRUD ÓRDENES (PAGOS SIMULADOS) – ahora con dirección de envío
 
