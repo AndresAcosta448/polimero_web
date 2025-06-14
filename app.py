@@ -15,6 +15,7 @@ import math
 import pandas as pd
 
 from io import BytesIO
+import os
 
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import (
