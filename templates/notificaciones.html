@@ -1,44 +1,26 @@
-<!-- templates/notificaciones.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Notificaciones</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="../static/notifcaciones.css">
-  <!-- o un CSS específico si prefieres -->
+  <title>Mis Notificaciones</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='notificaciones_cliente.css') }}">
 </head>
 <body>
-
-  <nav class="nav">
-    <div class="logo">
-      <img src="../static/imagenes/AggreBind-White-logo (1).png" alt="Logo">
-    </div>
-    <div class="main_list">
-      <ul>
-        <li><a href="{{ url_for('calculadora') }}" class="btn-primary">Inicio</a></li>
-        <li><a href="{{ url_for('ver_cotizaciones_pendientes') }}" class="btn-primary">Cotizaciones</a></li>
-        <li><a href="{{ url_for('logout') }}" class="btn">Cerrar sesión</a></li>
-      </ul>
-    </div>
-  </nav>
-
-  <div class="container">
-    <h1>Notificaciones</h1>
-
-    {% if notificaciones %}
-      <ul class="notifications-list">
-        {% for n in notificaciones %}
-          <li>
-            <span class="mensaje">{{ n.mensaje }}</span>
-            <span class="fecha">{{ n.fecha.strftime('%d/%m/%Y %H:%M') }}</span>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p>No tienes notificaciones nuevas.</p>
-    {% endif %}
+  <div class="pending-container">
+    <h1>Mis Notificaciones</h1>
+    <a class="back-link" href="{{ url_for('calculadora') }}">← Volver</a>
+    <ul class="list-group mt-3">
+      {% for n in notificaciones %}
+        <li class="list-group-item">
+          <small class="text-muted">{{ n.fecha.strftime('%Y-%m-%d %H:%M') }}</small><br>
+          {{ n.mensaje }}
+        </li>
+      {% else %}
+        <li class="list-group-item text-center">
+          No tienes notificaciones nuevas.
+        </li>
+      {% endfor %}
+    </ul>
   </div>
-
 </body>
 </html>

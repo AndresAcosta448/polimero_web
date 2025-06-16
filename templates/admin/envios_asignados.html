@@ -1,0 +1,51 @@
+{% extends 'base_admin.html' %}
+
+{% block content %}
+<h2>Envíos Asignados</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Cliente</th>
+            <th>Vehículo</th>
+            <th>Conductor</th>
+            <th>Dirección</th>
+            <th>Estado Actual</th>
+            <th>Cambiar Estado</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for envio in envios %}
+        <tr>
+            <td>{{ envio.id }}</td>
+            <td>{{ envio.nombre }} {{ envio.apellido }}</td>
+            <td>{{ envio.placa }}</td>
+            <td>{{ envio.conductor }}</td>
+            <td>{{ envio.direccion_envio }}</td>
+            <td>{{ envio.estado_envio }}</td>
+            <td>
+                <form method="POST">
+                    <input type="hidden" name="envio_id" value="{{ envio.id }}">
+                    <select name="estado_envio" required>
+                        <option value="Pendiente" {% if envio.estado_envio == 'Pendiente' %}selected{% endif %}>Pendiente</option>
+                        <option value="En ruta" {% if envio.estado_envio == 'En ruta' %}selected{% endif %}>En ruta</option>
+                        <option value="Entregado" {% if envio.estado_envio == 'Entregado' %}selected{% endif %}>Entregado</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary btn-sm">Actualizar</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% with messages = get_flashed_messages(with_categories=True) %}
+    {% if messages %}
+        {% for category, msg in messages %}
+            <div class="alert alert-{{ category }}">{{ msg }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+{% endblock %}

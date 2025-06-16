@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro</title>
-    <link rel="stylesheet" href="static/registro.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='registro.css') }}">
     <script>
         function capitalizarPrimeraLetra(id) {
             const input = document.getElementById(id);
@@ -12,11 +12,38 @@
         }
 
         function validarFormulario(e) {
-            const contrasena = document.getElementById("contrasena").value;
+            const nombre = document.getElementById("nombre").value.trim();
+            const apellido = document.getElementById("apellido").value.trim();
+            const correo = document.getElementById("correo").value.trim();
+            const contrasena = document.getElementById("contrasena").value.trim();
+
+            const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if (nombre.length < 2) {
+                alert("El nombre debe tener al menos 2 caracteres.");
+                e.preventDefault();
+                return false;
+            }
+
+            if (apellido.length < 2) {
+                alert("El apellido debe tener al menos 2 caracteres.");
+                e.preventDefault();
+                return false;
+            }
+
+            if (!regexCorreo.test(correo)) {
+                alert("El correo debe tener un formato válido (ejemplo@dominio.com).");
+                e.preventDefault();
+                return false;
+            }
+
             if (contrasena.length < 6) {
                 alert("La contraseña debe tener al menos 6 caracteres.");
                 e.preventDefault();
+                return false;
             }
+
+            return true;
         }
     </script>
 </head>
@@ -25,7 +52,7 @@
 <div class="register-container">
     <h2>Registrarse</h2>
 
-    <!-- Mostrar los mensajes flash (alertas) -->
+    <!-- Mensajes flash -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <ul>
@@ -39,19 +66,19 @@
     <form action="{{ url_for('registro') }}" method="POST" id="registerForm" onsubmit="validarFormulario(event)">
         <div class="input-group">
             <label for="nombre">Nombre</label>
-            <input type="text" id="nombre" name="nombre" onblur="capitalizarPrimeraLetra('nombre')" required>
+            <input type="text" id="nombre" name="nombre" onblur="capitalizarPrimeraLetra('nombre')" required minlength="2">
         </div>
         <div class="input-group">
             <label for="apellido">Apellido</label>
-            <input type="text" id="apellido" name="apellido" onblur="capitalizarPrimeraLetra('apellido')" required>
+            <input type="text" id="apellido" name="apellido" onblur="capitalizarPrimeraLetra('apellido')" required minlength="2">
         </div>
         <div class="input-group">
             <label for="correo">Correo electrónico</label>
-            <input type="email" id="correo" name="correo" required>
+            <input type="email" id="correo" name="correo" required pattern="[^@ \t\r\n]+@[^@ \t\r\n]+\.[^@ \t\r\n]+" title="Debe ser un correo válido">
         </div>
         <div class="input-group">
             <label for="contrasena">Contraseña</label>
-            <input type="password" id="contrasena" name="contrasena" required>
+            <input type="password" id="contrasena" name="contrasena" required minlength="6" placeholder="Mínimo 6 caracteres">
         </div>
         <button type="submit">Registrarse</button>
     </form>

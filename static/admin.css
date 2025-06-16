@@ -1,0 +1,277 @@
+:root {
+  --verde: #a728a1;
+  --verde-hover: #218838;
+  --blanco: #fff;
+  --gris-texto: #555;
+  --sombra: rgba(0, 0, 0, 0.15);
+  --verde-gradiente: linear-gradient(135deg, #28a745, #34d058);
+}
+
+/* Fondo general */
+body {
+  background-color: #f4f4f4;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Navbar moderna */
+.navbar {
+  background: var(--verde-gradiente);
+  box-shadow: 0 4px 10px var(--sombra);
+}
+
+.navbar-brand,
+.navbar-text {
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+/* Tarjetas */
+.card {
+  background: var(--blanco);
+  border-radius: 12px;
+  box-shadow: 0 10px 20px var(--sombra);
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 30px;
+  height: 100%;
+}
+
+/* Efecto de hover */
+.card:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 20px 30px var(--sombra);
+}
+
+/* Animación sutil de brillo */
+.card::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: rgba(255, 255, 255, 0.05);
+  transform: rotate(25deg);
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+.card:hover::before {
+  opacity: 1;
+  animation: shine 2s linear infinite;
+}
+
+@keyframes shine {
+  0% { transform: rotate(25deg) translate(-100%, -100%); }
+  100% { transform: rotate(25deg) translate(100%, 100%); }
+}
+
+.card-title {
+  color: var(--verde);
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.card-text {
+  font-size: 1rem;
+  color: var(--gris-texto);
+}
+
+/* Botones modernos */
+.btn-gestionar-admins {
+  display: inline-block;
+  padding: 10px 20px;
+  margin-top: 15px;
+  background: var(--verde-gradiente);
+  color: var(--blanco);
+  text-decoration: none;
+  border: none;
+  border-radius: 25px;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.btn-gestionar-admins:hover {
+  background: linear-gradient(135deg, var(--verde-hover), #28a745);
+  transform: translateY(-2px);
+}
+
+/* Distribución vertical uniforme de la tarjeta */
+.card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+/* Footer */
+footer {
+  background: #222;
+  color: var(--blanco);
+  font-size: 0.9rem;
+  box-shadow: 0 -4px 10px var(--sombra);
+}
+
+/* Badges de notificaciones */
+.badge {
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+/* Botón de cerrar sesión */
+.btn-outline-light {
+  border-radius: 20px;
+  padding: 5px 15px;
+  transition: background 0.3s, color 0.3s;
+}
+ :root {
+      --verde: #7428a7;
+      --verde-hover: #218838;
+      --blanco: #fff;
+      --gris-texto: #555;
+      --sombra: rgba(0, 0, 0, 0.15);
+      --verde-gradiente: linear-gradient(135deg, #28a745, #34d058);
+    }
+
+    body {
+      background-color: #f4f4f4;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .navbar {
+      background: var(--verde-gradiente);
+      box-shadow: 0 4px 10px var(--sombra);
+    }
+
+    .navbar-brand,
+    .navbar-text {
+      font-weight: 600;
+      font-size: 1.2rem;
+    }
+
+    .card {
+      background: var(--blanco);
+      border-radius: 12px;
+      box-shadow: 0 10px 20px var(--sombra);
+      transition: transform 0.4s ease, box-shadow 0.4s ease;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 30px;
+      height: 100%;
+    }
+
+    .card:hover {
+      transform: translateY(-10px) scale(1.02);
+      box-shadow: 0 20px 30px var(--sombra);
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: rgba(255, 255, 255, 0.05);
+      transform: rotate(25deg);
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+
+    .card:hover::before {
+      opacity: 1;
+      animation: shine 2s linear infinite;
+    }
+
+    @keyframes shine {
+      0% { transform: rotate(25deg) translate(-100%, -100%); }
+      100% { transform: rotate(25deg) translate(100%, 100%); }
+    }
+
+    .card-title {
+      color: var(--verde);
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .card-text {
+      font-size: 1rem;
+      color: var(--gris-texto);
+    }
+
+    .btn-gestionar-admins {
+      display: inline-block;
+      padding: 10px 20px;
+      margin-top: 15px;
+      background: var(--verde-gradiente);
+      color: var(--blanco);
+      text-decoration: none;
+      border: none;
+      border-radius: 25px;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+
+    .btn-gestionar-admins:hover {
+      background: linear-gradient(135deg, var(--verde-hover), #28a745);
+      transform: translateY(-2px);
+    }
+
+    .card-body {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+    }
+
+    footer {
+      background: #222;
+      color: var(--blanco);
+      font-size: 0.9rem;
+      box-shadow: 0 -4px 10px var(--sombra);
+      text-align: center;
+      padding: 1rem 0;
+      margin-top: 40px;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      font-weight: bold;
+    }
+
+    .btn-outline-light {
+      border-radius: 20px;
+      padding: 5px 15px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .btn-outline-light:hover {
+      background: var(--blanco);
+      color: var(--verde-hover);
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+.btn-outline-light:hover {
+  background: var(--blanco);
+  color: var(--verde-hover);
+}
+
+/* Ajuste general para que las tarjetas siempre tengan la misma altura */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}

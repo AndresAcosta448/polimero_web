@@ -1,137 +1,152 @@
-@import url('https://fonts.googleapis.com/css?family=Quicksand:400,500,700&display=swap');
+/* static/ver_cotizacion.css */
 
-html, body {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Quicksand", sans-serif;
-  font-size: 62.5%;
-  background-image: url('../static/imagenes/352993-admin.jpg');
-  background-size: cover;
-  color: #333;
+/* 1. Variables generales */
+:root {
+  --verde: #28a745;
+  --verde-hover: #218838;
+  --verde-gradiente: linear-gradient(135deg, #28a745, #34d058);
+  --blanco: #fff;
+  --gris-texto: #555;
+  --sombra: rgba(0, 0, 0, 0.15);
+  --radio: 12px;
 }
 
-/* Navbar */
-.nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(0,0,0,0.6);
-  padding: 0 2rem;
-  height: 6rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-}
-.nav .logo img {
-  height: 4rem;
-}
-.nav .main_list ul {
-  display: flex;
-  list-style: none;
+/* 2. Fondo general */
+body {
+  background-color: #f4f4f4;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
   padding: 0;
 }
-.nav .main_list ul li {
-  margin-left: 1rem;
-}
 
-/* Botones del navbar */
-.nav .main_list ul li a {
-  display: inline-block;
-  padding: 0.8rem 1.5rem;
-  font-size: 1.8rem;
-  text-decoration: none;
-  border-radius: 0.5rem;
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
-
-/* “Inicio” (botón primario) */
-.nav .main_list ul li a.btn-primary {
-  background-color: #037903;
-  color: #ffffff;
-  border: 2px solid #037903;
-}
-.nav .main_list ul li a.btn-primary:hover {
-  background-color: #049410;
-  border-color: #049410;
-}
-
-/* “Cerrar sesión” (botón secundario) */
-.nav .main_list ul li a.btn {
-  background-color: #037903;
-  color: #ffffff;
-  border: 2px solid #037903;
-}
-.nav .main_list ul li a.btn:hover {
-  background-color: #037903;
-}
-
-/* Contenedor principal */
-.container {
-  max-width: 900px;
-  margin: 5rem auto;
+/* 3. Panel principal (más grande y con sombras suaves) */
+.pending-container {
+  max-width: 1200px;
+  margin: 50px auto;
   padding: 2rem;
-  background-color: rgba(255,255,255,0.9);
-  border-radius: 1rem;
-  box-shadow: 0 0 2rem rgba(0,0,0,0.2);
-}
-.container h1 {
-  text-align: center;
-  font-size: 3rem;
-  margin-bottom: 2rem;
+  background: var(--blanco);
+  border-radius: var(--radio);
+  box-shadow: 0 10px 20px var(--sombra);
+  overflow: hidden;
 }
 
-/* Tabla de cotizaciones */
-.cotizaciones-table {
+/* 4. Título */
+.pending-container h1 {
+  color: var(--verde);
+  font-size: 2.4rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+/* 5. Tabla */
+.pending-container table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 1.6rem;
+  margin-top: 1rem;
+  background: var(--blanco);
+  border-radius: var(--radio);
+  overflow: hidden;
+  box-shadow: 0 4px 10px var(--sombra);
 }
-.cotizaciones-table th,
-.cotizaciones-table td {
+
+.pending-container thead {
+  background: var(--verde);
+  color: var(--blanco);
+}
+
+.pending-container th, 
+.pending-container td {
   padding: 1rem;
-  text-align: center;
-  border-bottom: 1px solid #ccc;
-}
-.cotizaciones-table th {
-  background-color: #037903;
-  color: #fff;
-  font-weight: 500;
-}
-.cotizaciones-table tr:nth-child(even) {
-  background-color: #f4f4f4;
+  text-align: left;
+  border: 1px solid #ddd;
+  font-size: 1rem;
 }
 
-/* Botón “En espera” */
-.btn-disabled {
-  background-color: #888;
-  color: #fff;
-  border: none;
+.pending-container tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.pending-container tbody tr:hover {
+  background-color: #eafaf1;
+}
+
+/* 6. Botones */
+.pending-container .btn-outline-success,
+.pending-container .btn-outline-danger {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  border-radius: 25px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.pending-container .btn-outline-success {
+  color: var(--verde);
+  border: 1px solid var(--verde);
+  background: var(--blanco);
+}
+
+.pending-container .btn-outline-success:hover {
+  background: var(--verde-gradiente);
+  color: var(--blanco);
+  transform: translateY(-2px);
+}
+
+.pending-container .btn-outline-danger {
+  color: #e53935;
+  border: 1px solid #e53935;
+  background: var(--blanco);
+}
+
+.pending-container .btn-outline-danger:hover {
+  background: #e53935;
+  color: var(--blanco);
+  transform: translateY(-2px);
+}
+
+/* 7. Botón de volver */
+.pending-container a.btn-secondary {
+  display: inline-block;
+  margin-top: 1.5rem;
+  font-size: 1rem;
   padding: 0.6rem 1.2rem;
-  font-size: 1.6rem;
-  border-radius: 0.5rem;
-  cursor: not-allowed;
+  border-radius: 25px;
+  background: var(--verde-gradiente);
+  color: var(--blanco);
+  text-decoration: none;
+  box-shadow: 0 4px 10px var(--sombra);
+  transition: background 0.3s ease, transform 0.2s ease;
 }
 
-/* Responsive */
+.pending-container a.btn-secondary:hover {
+  background: linear-gradient(135deg, var(--verde-hover), #28a745);
+  transform: translateY(-2px);
+}
+
+/* 8. Texto cuando no hay cotizaciones */
+.pending-container td[colspan] {
+  text-align: center;
+  padding: 2rem;
+  font-style: italic;
+  color: var(--gris-texto);
+}
+
+/* 9. Responsive */
 @media (max-width: 768px) {
-  .nav {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .nav .main_list ul {
-    flex-direction: column;
-    width: 100%;
-  }
-  .nav .main_list ul li {
-    margin: 0.5rem 0;
-  }
-  .container {
-    margin: 3rem 1rem;
+  .pending-container {
+    margin: 2rem 1rem;
     padding: 1rem;
   }
-  .cotizaciones-table th,
-  .cotizaciones-table td {
-    font-size: 1.4rem;
-    padding: 0.8rem;
+
+  .pending-container h1 {
+    font-size: 1.8rem;
+  }
+
+  .pending-container th, 
+  .pending-container td {
+    font-size: 0.9rem;
+    padding: 0.6rem;
   }
 }

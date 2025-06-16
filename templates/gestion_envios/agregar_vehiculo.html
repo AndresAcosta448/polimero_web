@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Agregar Vehículo</title>
+  <link 
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
+    rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='agregar_vehiculo.css') }}">
+</head>
+<body>
+  <div class="d-flex">
+    {% include 'sidebar.html' %}
+    <div class="flex-fill">
+      {% include 'navbar_admin.html' %}
+
+      <div class="container-form">
+        <div class="form-card">
+          <h1>Agregar Vehículo</h1>
+          <p><a href="{{ url_for('listar_envios_route') }}" style="text-decoration: none; color: var(--verde);">&larr; Volver a Envíos</a></p>
+
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              <ul class="flash-list">
+                {% for category, msg in messages %}
+                  <li class="{{ category }}">{{ msg }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          {% endwith %}
+
+          <form action="{{ url_for('agregar_vehiculo_route') }}" method="POST">
+            <label for="tipo">Tipo de vehículo:</label>
+            <select name="tipo" id="tipo" required>
+              <option value="">-- Selecciona un tipo --</option>
+              <option value="Camion">Camion</option>
+              <option value="Remolque">Remolque</option>
+              <option value="Volqueta">Volqueta</option>
+              <option value="Carrotanque">Carrotanque</option>
+              <option value="Camion Cerrado">Camion Cerrado</option>
+              <option value="Camion Grua">Camion Grua</option>
+              <option value="Camioneta">Camioneta</option>
+            </select>
+
+            <label for="placa">Placa:</label>
+            <input type="text" name="placa" id="placa" required minlength="6" maxlength="10" pattern="[A-Za-z0-9\-]{6,10}" title="Debe tener entre 6 y 10 caracteres (solo letras, números y guiones)">
+
+            <label for="capacidad_litros">Capacidad (litros):</label>
+            <input type="number" name="capacidad_litros" id="capacidad_litros" min="1" required>
+
+            <button type="submit" class="btn-gestionar-admins">Guardar Vehículo</button>
+          </form>
+
+          <hr>
+          <h2>Eliminar Vehículo</h2>
+          <form action="{{ url_for('eliminar_vehiculo') }}" method="POST">
+            <label for="vehiculo_id">Selecciona un vehículo:</label>
+            <select name="vehiculo_id" id="vehiculo_id" class="form-select" required>
+              <option value="" disabled selected>-- Elige uno --</option>
+              {% for v in vehiculos %}
+                <option value="{{ v.id }}">
+                  {{ v.tipo | capitalize }} – {{ v.placa }} ({{ v.capacidad_litros }} L)
+                </option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-danger mt-3">Eliminar</button>
+          </form>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

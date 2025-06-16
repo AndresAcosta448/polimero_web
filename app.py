@@ -1,30 +1,988 @@
-import os
-from pathlib import Path
-from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
-# ya no importas mysql.connector ni flask_mail aquí: lo volverás a importar después
-import mysql.connector
-from flask_mail import Mail, Message
+# ===============================
+# imports de librerías estándar
+# ===============================
 import random
+import math
+import re
+from datetime import date, timedelta, datetime
+from io import BytesIO
+
+# ===============================
+# imports de terceros
+# ===============================
+import mysql.connector
+from mysql.connector import Error
+
+from flask import (
+    Flask, render_template, request, redirect, url_for,
+    session, flash, jsonify, send_file, make_response
+)
+from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# 1) Carga variables de tu .env en local (en Render, las lee del entorno)
-env_path = Path(__file__).parent / '.env'
-load_dotenv(dotenv_path=env_path)
+import pandas as pd
+import pdfkit
 
+# =========================================
+# configuración de backend para Matplotlib
+# (debe ir antes de importar pyplot)
+# =========================================
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ===============================
+# imports de ReportLab
+# ===============================
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.utils import ImageReader
+from reportlab.platypus import (
+    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+)
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+
+# ===============================
+# Inicialización de la app
+# ===============================
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'clave_secreta_segura')  # también puedes llevarla a .env
+app.secret_key = 'clave_secreta_segura'
 
-# 2) Función para obtener conexión usando vars de entorno
+# Conexión a Railway
 def get_db_connection():
-    return mysql.connector.connect(
-        host=os.getenv('DB_HOST', 'localhost'),
-        user=os.getenv('DB_USER', 'root'),
-        password=os.getenv('DB_PASS', '1234'),
-        database=os.getenv('DB_NAME', 'polimero_db')
+    """
+    Retorna un objeto de conexión a MySQL en Railway.
+    """
+    try:
+        conn = mysql.connector.connect(
+            host='mainline.proxy.rlwy.net',
+            port=23787,
+            user='root',
+            password='UZBILEBsVmNsDlZKcQNvIvEuhtGqpeTT',  # tu contraseña de Railway
+            database='railway'  # nombre de la base en Railway
+        )
+        print("✅ Conectado a base: railway")
+        return conn
+    except Error as e:
+        print(f"[Error] No se pudo conectar a MySQL: {e}")
+        return None
+
+# Obtener el correo de un usuario por su ID
+def get_usuario_correo(usuario_id):
+    """
+    Retorna el correo del usuario dado su ID.
+    """
+    conn = get_db_connection()
+    if not conn:
+        return None
+    cur = conn.cursor()
+    cur.execute("SELECT correo FROM usuarios WHERE id = %s", (usuario_id,))
+    fila = cur.fetchone()
+    cur.close()
+    conn.close()
+    return fila[0] if fila else None
+
+
+def generar_recibo_pdf(pedido):
+    """
+    Recibe un objeto pedido (con atributos cliente, productos, total, fecha, id, etc.)
+    y devuelve los bytes del PDF.
+    """
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    # Encabezado
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(50, height - 50, "Recibo de Compra")
+    c.setFont("Helvetica", 10)
+    c.drawString(50, height - 70, f"Número de pedido: {pedido.id}")
+    c.drawString(50, height - 85, f"Fecha: {pedido.fecha.strftime('%d/%m/%Y')}")
+
+    # Datos del cliente
+    c.drawString(50, height - 115, "Cliente:")
+    c.drawString(80, height - 130, f"{pedido.cliente.nombre} {pedido.cliente.apellido}")
+    c.drawString(80, height - 145, f"{pedido.cliente.email}")
+
+    # Tabla de productos
+    y = height - 180
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(50, y, "Producto")
+    c.drawString(300, y, "Cantidad")
+    c.drawString(400, y, "Precio unitario")
+    c.drawString(500, y, "Subtotal")
+    c.setFont("Helvetica", 10)
+    y -= 20
+    for item in pedido.lineas:
+        c.drawString(50, y, item.producto.nombre)
+        c.drawString(300, y, str(item.cantidad))
+        c.drawString(400, y, f"${item.precio:,.2f}")
+        c.drawString(500, y, f"${item.subtotal:,.2f}")
+        y -= 15
+
+    # Total
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(400, y - 10, "Total:")
+    c.drawString(500, y - 10, f"${pedido.total:,.2f}")
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer.read()
+
+
+def generar_recibo_simple_bytes(pedido_id, cliente_nombre, fecha, metodo, detalle_pago, direccion, total):
+    """
+    Crea un PDF en memoria con los datos más básicos del recibo.
+    Devuelve los bytes del PDF.
+    """
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    w, h = letter
+
+    # Encabezado
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(50, h - 50, "Recibo de Compra")
+    c.setFont("Helvetica", 10)
+    c.drawString(50, h - 70, f"Nº pedido: {pedido_id}")
+    c.drawString(50, h - 85, f"Fecha: {fecha}")
+
+    # Datos básicos
+    c.drawString(50, h - 110, f"Cliente: {cliente_nombre}")
+    c.drawString(50, h - 125, f"Método de pago: {metodo} ({detalle_pago})")
+    c.drawString(50, h - 140, f"Dirección: {direccion}")
+    c.drawString(50, h - 155, f"Total: ${total:,.2f}")
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer.read()
+
+# ===============================
+# Rutas Admin - Compras PDF
+# ===============================
+@app.route('/admin/reportes/compras/pdf')
+def compras_pdf():
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
+
+    modo        = request.args.get('modo','todos')
+    nombre      = request.args.get('nombre','').strip()
+    fecha_desde = request.args.get('fecha_desde','').strip()
+    fecha_hasta = request.args.get('fecha_hasta','').strip()
+
+    filtros, params = [], []
+    if modo == 'cliente' and nombre:
+        filtros.append("(u.nombre LIKE %s OR u.apellido LIKE %s)")
+        params.extend([f"%{nombre}%", f"%{nombre}%"])
+    if modo == 'fecha':
+        if fecha_desde:
+            filtros.append("o.fecha_creacion >= %s"); params.append(fecha_desde)
+        if fecha_hasta:
+            filtros.append("o.fecha_creacion <= %s"); params.append(f"{fecha_hasta} 23:59:59")
+
+    sql = (
+        "SELECT o.id, u.nombre, u.apellido, o.monto, o.metodo_pago, o.estado_pago, o.fecha_creacion "
+        "FROM ordenes o JOIN usuarios u ON o.cliente_id = u.id"
+    )
+    if filtros:
+        sql += " WHERE " + " AND ".join(filtros)
+    sql += " ORDER BY o.fecha_creacion DESC"
+
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(sql, params)
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+
+    buffer = BytesIO()
+    doc    = SimpleDocTemplate(buffer, pagesize=letter, title="Reporte de Órdenes")
+    styles = getSampleStyleSheet()
+    elements = [Paragraph("Reporte de Órdenes", styles['Title']), Spacer(1,12)]
+
+    data = [["ID","Cliente","Monto","Método","Estado","Fecha"]]
+    for o in rows:
+        data.append([
+            o['id'],
+            f"{o['nombre']} {o['apellido']}",
+            f"${o['monto']:,.2f}",
+            o['metodo_pago'],
+            o['estado_pago'],
+            o['fecha_creacion'].strftime("%Y-%m-%d %H:%M")
+        ])
+
+    table = Table(data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND',(0,0),(-1,0),colors.lightgreen),
+        ('TEXTCOLOR',(0,0),(-1,0),colors.white),
+        ('ALIGN',(0,0),(-1,-1),'CENTER'),
+        ('GRID',(0,0),(-1,-1),0.5,colors.grey),
+        ('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),
+    ]))
+    elements.append(table)
+
+    doc.build(elements)
+    pdf = buffer.getvalue()
+    buffer.close()
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'attachment; filename=ordenes.pdf'
+    return response
+
+# ===============================
+# Función de obtención de estadísticas
+def obtener_estadisticas():
+    hoy = date.today()
+    fechas = [hoy - timedelta(days=i) for i in range(29, -1, -1)]
+    valores = [100000 + i*500 - (i%5)*200 for i in range(30)]
+    return fechas, valores
+
+# ===============================
+# Ruta PDF con gráfica de inventario
+@app.route('/descargar_reporte_pdf')
+def descargar_reporte_pdf():
+    fechas, valores = obtener_estadisticas()
+    # Generar gráfica
+    buf_img = BytesIO()
+    plt.figure(figsize=(6,3))
+    plt.plot(fechas, valores, marker='o', linestyle='-')
+    plt.title('Evolución Mensual de Inventario (L)')
+    plt.xlabel('Fecha')
+    plt.ylabel('Litros')
+    plt.xticks(rotation=45, fontsize=6)
+    plt.tight_layout()
+    plt.savefig(buf_img, format='PNG')
+    plt.close()
+    buf_img.seek(0)
+    # Crear PDF
+    buf_pdf = BytesIO()
+    c = canvas.Canvas(buf_pdf, pagesize=letter)
+    ancho, alto = letter
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(40, alto - 50, "REPORTE DE ESTADÍSTICAS DE INVENTARIO")
+    c.setFont("Helvetica", 9)
+    c.drawString(40, alto - 70, f"Fecha: {date.today().isoformat()}")
+    imagen = ImageReader(buf_img)
+    c.drawImage(imagen, 40, alto - 300, width=500, height=200)
+    c.showPage()
+    c.save()
+    buf_pdf.seek(0)
+    return send_file(
+        buf_pdf,
+        download_name='reporte_inventario.pdf',
+        as_attachment=True,
+        mimetype='application/pdf'
     )
 
-# Configuración de Flask-Mail
+# ===============================
+# ===============================
+# Rutas Admin - Reporte Compras (HTML)
+# ===============================
+@app.route('/admin/reportes/compras')
+def reporte_compras():
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
+
+    # Leer filtros de query string
+    nombre      = request.args.get('nombre', '').strip()
+    fecha_desde = request.args.get('fecha_desde', '').strip()
+    fecha_hasta = request.args.get('fecha_hasta', '').strip()
+    monto_min   = request.args.get('monto_min', '').strip()
+    monto_max   = request.args.get('monto_max', '').strip()
+
+    filtros = []
+    params  = []
+    if nombre:
+        filtros.append("(u.nombre LIKE %s OR u.apellido LIKE %s)")
+        params.extend([f"%{nombre}%", f"%{nombre}%"])
+    if fecha_desde:
+        filtros.append("o.fecha_creacion >= %s"); params.append(fecha_desde)
+    if fecha_hasta:
+        filtros.append("o.fecha_creacion <= %s"); params.append(f"{fecha_hasta} 23:59:59")
+    if monto_min:
+        filtros.append("o.monto >= %s"); params.append(monto_min)
+    if monto_max:
+        filtros.append("o.monto <= %s"); params.append(monto_max)
+
+    sql = (
+        "SELECT o.id, o.fecha_creacion, o.monto, o.metodo_pago, o.estado_pago, u.nombre, u.apellido "
+        "FROM ordenes o JOIN usuarios u ON o.cliente_id = u.id"
+    )
+    if filtros:
+        sql += " WHERE " + " AND ".join(filtros)
+    sql += " ORDER BY o.fecha_creacion DESC"
+
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(sql, params)
+    compras = cur.fetchall()
+    cur.close(); conn.close()
+
+    return render_template('reportes/compras.html', compras=compras)
+
+    # ------------------- Órdenes & Cotizaciones -------------------
+
+def crear_orden(cotizacion_id, cliente_id, monto, metodo_pago, direccion_envio):
+    sql = """
+      INSERT INTO ordenes (cotizacion_id, cliente_id, monto, metodo_pago, direccion_envio)
+      VALUES (%s,%s,%s,%s,%s)
+    """
+    conn = get_db_connection()
+    if not conn:
+        return None
+    try:
+        cursor = conn.cursor()
+        cursor.execute(sql, (cotizacion_id, cliente_id, monto, metodo_pago, direccion_envio))
+        conn.commit()
+        return cursor.lastrowid
+    except Error as e:
+        print(f"[ERROR crear_orden]: {e}")
+        return None
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def listar_ordenes_pendientes():
+    sql = """
+    SELECT
+      o.id,
+      o.cotizacion_id,
+      o.cliente_id,
+      o.monto,
+      o.metodo_pago,
+      o.estado_pago,
+      o.fecha_creacion,
+      u.nombre AS cliente_nombre,
+      u.apellido AS cliente_apellido,
+      c.total AS total_cotizacion,
+      o.direccion_envio AS ciudad
+    FROM ordenes o
+    JOIN usuarios u ON o.cliente_id = u.id
+    JOIN cotizaciones c ON o.cotizacion_id = c.id
+    WHERE o.estado_pago = 'Pendiente'
+    ORDER BY o.fecha_creacion DESC
+    """
+    conn = get_db_connection()
+    if not conn:
+        return []
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(sql)
+    filas = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return filas
+
+
+def actualizar_estado_orden(orden_id, nuevo_estado):
+    if nuevo_estado not in ('Pendiente','Aprobado','Rechazado'):
+        flash('Estado inválido.', 'danger')
+        return False
+    conn = get_db_connection()
+    if not conn:
+        return False
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE ordenes SET estado_pago=%s, fecha_actualizacion=NOW() WHERE id=%s",
+            (nuevo_estado, orden_id)
+        )
+        conn.commit()
+        return True
+    except Error as e:
+        print(f"[Error actualizar_estado_orden]: {e}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def obtener_orden_por_id(envio_id):
+    # Reusa listar_envios para buscar
+    envs = listar_envios()
+    return next((e for e in envs if e['id']==envio_id), None)
+
+
+
+# ------------------- Vehículos, Conductores & Envios -------------------
+
+def crear_envio(origen, destino, cantidad_litros):
+    sql = """
+    INSERT INTO envios (origen, destino, cantidad_litros)
+    VALUES (%s, %s, %s)
+    """
+    conn = get_db_connection()
+    if not conn:
+        return None
+    try:
+        cursor = conn.cursor()
+        cursor.execute(sql, (origen, destino, cantidad_litros))
+        conn.commit()
+        return cursor.lastrowid
+    except Error as e:
+        print(f"[Error crear_envio]: {e}")
+        return None
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def listar_envios():
+    sql = """
+    SELECT 
+      e.id, e.origen, e.destino, e.cantidad_litros,
+      e.fecha_creacion, e.estado,
+      v.placa AS vehiculo_placa, v.capacidad_litros AS vehiculo_cap,
+      c.nombre AS conductor_nombre,
+      e.fecha_salida, e.fecha_entrega
+    FROM envios e
+    LEFT JOIN vehiculos v ON e.vehiculo_id=v.id
+    LEFT JOIN conductores c ON e.conductor_id=c.id
+    ORDER BY e.fecha_creacion DESC
+    """
+    conn = get_db_connection()
+    if not conn:
+        return []
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(sql)
+    filas = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return filas
+
+
+def calcular_carrotanques(cantidad_total, capacidad_carrotanque):
+    return math.ceil(cantidad_total / capacidad_carrotanque)
+
+
+def asignar_envio(envio_id, vehiculo_id, conductor_id):
+    conn = get_db_connection()
+    if not conn:
+        return False
+    try:
+        cursor = conn.cursor(dictionary=True)
+        sql_info = """
+        SELECT e.cantidad_litros AS cant, v.capacidad_litros AS cap
+        FROM envios e
+        JOIN vehiculos v ON v.id=%s
+        WHERE e.id=%s
+        """
+        cursor.execute(sql_info, (vehiculo_id, envio_id))
+        datos = cursor.fetchone()
+        if not datos:
+            return False
+        cant, cap = datos['cant'], datos['cap']
+        num = calcular_carrotanques(cant, cap)
+        if cant>cap:
+            flash(f"Capacidad insuficiente ({cap}L) para {cant}L. Hacen falta {num} carrotanques.", 'warning')
+        # Asignar
+        cursor.execute(
+            "UPDATE envios SET vehiculo_id=%s, conductor_id=%s, estado='En ruta', fecha_salida=NOW() WHERE id=%s",
+            (vehiculo_id, conductor_id, envio_id)
+        )
+        cursor.execute("UPDATE vehiculos SET disponible=0 WHERE id=%s", (vehiculo_id,))
+        conn.commit()
+        return True
+    except Error as e:
+        print(f"[Error asignar_envio]: {e}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/admin/actualizar_estado_envio', methods=["POST"])
+def actualizar_estado_envio():
+    envio_id = request.form.get("envio_id")
+    nuevo_estado = request.form.get("estado")
+
+    if not envio_id or not nuevo_estado:
+        flash("Datos inválidos.", "warning")
+        return redirect(url_for("envios_asignados"))
+
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+
+    try:
+        if nuevo_estado == "Entregado":
+            # Liberar vehículo y conductor
+            cur.execute("SELECT vehiculo_id FROM envios WHERE id = %s", (envio_id,))
+            veh = cur.fetchone()
+            if veh and veh["vehiculo_id"]:
+                cur.execute("UPDATE vehiculos SET disponible = 1 WHERE id = %s", (veh["vehiculo_id"],))
+
+            cur.execute("""
+                UPDATE envios SET estado = %s, fecha_entrega = NOW()
+                WHERE id = %s
+            """, (nuevo_estado, envio_id))
+        else:
+            cur.execute("UPDATE envios SET estado = %s WHERE id = %s", (nuevo_estado, envio_id))
+
+        conn.commit()
+        flash("Estado del envío actualizado correctamente.", "success")
+    except Exception as e:
+        print("Error:", e)
+        flash("Error al actualizar el estado del envío.", "danger")
+    finally:
+        cur.close(); conn.close()
+
+    return redirect(url_for("envios_asignados"))
+
+
+# ------------------- CRUD Vehículos & Conductores -------------------
+
+def agregar_vehiculo(tipo, placa, capacidad_litros):
+    sql = "INSERT INTO vehiculos(tipo,placa,capacidad_litros) VALUES(%s,%s,%s)"
+    conn = get_db_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute(sql,(tipo,placa,capacidad_litros))
+        conn.commit()
+        return True
+    except Error as e:
+        print(f"[Error agregar_vehiculo]: {e}")
+        return False
+    finally:
+        cur.close(); conn.close()
+
+def listar_vehiculos(disponibles_solo=False):
+    sql = "SELECT id,tipo,placa,capacidad_litros,disponible FROM vehiculos"
+    if disponibles_solo:
+        sql += " WHERE disponible=1"
+    conn = get_db_connection()
+    if not conn:
+        return []
+    cur = conn.cursor(dictionary=True)
+    cur.execute(sql)
+    r = cur.fetchall()
+    cur.close(); conn.close()
+    return r
+
+def agregar_conductor(nombre, cedula, telefono=None):
+    sql = "INSERT INTO conductores(nombre,cedula,telefono) VALUES(%s,%s,%s)"
+    conn = get_db_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute(sql,(nombre,cedula,telefono))
+        conn.commit()
+        return True
+    except Error as e:
+        print(f"[Error agregar_conductor]: {e}")
+        return False
+    finally:
+        cur.close(); conn.close()
+
+def listar_conductores():
+    sql = "SELECT id,nombre,cedula,telefono FROM conductores"
+    conn = get_db_connection()
+    if not conn:
+        return []
+    cur = conn.cursor(dictionary=True)
+    cur.execute(sql)
+    r = cur.fetchall()
+    cur.close()
+    conn.close()
+    return r
+
+
+# ------------------- Rutas Envios -------------------
+
+@app.route('/envios')
+def listar_envios_route():
+    envs = listar_envios()
+    return render_template('gestion_envios/listar_envios.html', envios=envs)
+
+@app.route('/envios/nuevo', methods=['GET','POST'])
+def crear_envio_route():
+    if request.method=='POST':
+        origen=request.form.get('origen','').strip()
+        destino=request.form.get('destino','').strip()
+        cantidad=request.form.get('cantidad_litros','').strip()
+        if not origen or not destino or not cantidad:
+            flash('Todos los campos obligatorios','warning')
+            return redirect(url_for('crear_envio_route'))
+        try:
+            cant=int(cantidad)
+            if cant<=0: raise ValueError
+        except:
+            flash('Cantidad inválida','danger')
+            return redirect(url_for('crear_envio_route'))
+        nid=crear_envio(origen,destino,cant)
+        if nid:
+            flash(f'Envío registrado ID={nid}','success')
+            return redirect(url_for('asignar_envio_route',envio_id=nid))
+        flash('Error al crear envío','danger')
+        return redirect(url_for('crear_envio_route'))
+    return render_template('gestion_envios/crear_envio.html')
+
+@app.route("/envios/<int:envio_id>/asignar", methods=["GET", "POST"])
+def asignar_envio_route(envio_id):
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
+
+    if request.method == "POST":
+        vehiculo_id  = request.form.get("vehiculo_id")
+        conductor_id = request.form.get("conductor_id")
+        if not vehiculo_id or not conductor_id:
+            flash("Debes seleccionar vehículo y conductor.", "warning")
+            return redirect(url_for("asignar_envio_route", envio_id=envio_id))
+
+        conn = get_db_connection()
+        cur  = conn.cursor()
+        # 1) Actualizar ordenes con vehículo y conductor
+        cur.execute("""
+            UPDATE ordenes
+            SET vehiculo_id        = %s,
+                conductor_id       = %s,
+                estado_pago        = 'Aprobado',
+                fecha_actualizacion = NOW()
+            WHERE id = %s
+        """, (vehiculo_id, conductor_id, envio_id))
+        # 2) Marcar vehículo como no disponible
+        cur.execute("UPDATE vehiculos SET disponible = 0 WHERE id = %s", (vehiculo_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        flash(f"Orden #{envio_id} asignada correctamente.", "success")
+        return redirect(url_for("ordenes_pendientes"))
+
+    # GET: recuperar y mostrar datos
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute("""
+        SELECT 
+          o.id,
+          u.nombre AS cliente_nombre,
+          u.apellido AS cliente_apellido,
+          c.aggrebind AS cantidad_polimero,
+          c.agua      AS cantidad_agua,
+          o.direccion_envio
+        FROM ordenes o
+        JOIN usuarios u     ON u.id = o.cliente_id
+        JOIN cotizaciones c ON c.id = o.cotizacion_id
+        WHERE o.id = %s
+    """, (envio_id,))
+    envio = cur.fetchone()
+    cur.close(); conn.close()
+
+    if not envio:
+        flash(f"Orden #{envio_id} no encontrada.", "danger")
+        return redirect(url_for("ordenes_pendientes"))
+
+    vehiculos   = listar_vehiculos(disponibles_solo=True)
+    conductores = listar_conductores()
+
+    return render_template(
+        "admin/asignar_envio.html",
+        envio=envio,
+        vehiculos=vehiculos,
+        conductores=conductores
+    )
+def listar_ordenes_pendientes_envio():
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+    cur.execute("""
+        SELECT o.id, u.nombre, u.apellido, u.correo, c.aggrebind, o.direccion_envio
+        FROM ordenes o
+        JOIN usuarios u ON o.cliente_id = u.id
+        JOIN cotizaciones c ON o.cotizacion_id = c.id
+        WHERE o.estado_envio = 'Pendiente' AND o.estado_pago = 'Aprobado'
+        ORDER BY o.fecha_creacion DESC
+    """)
+    filas = cur.fetchall()
+    cur.close()
+    conn.close()
+    return filas
+@app.route('/admin/ordenes_pendientes_envio')
+def ordenes_pendientes_envio():
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
+    ordenes = listar_ordenes_pendientes_envio()
+    vehiculos = listar_vehiculos(disponibles_solo=True)
+    conductores = listar_conductores()
+    return render_template('admin/ordenes_pendientes_envio.html', ordenes=ordenes, vehiculos=vehiculos, conductores=conductores)
+
+@app.route('/admin/asignar_envio', methods=['POST'])
+def asignar_envio_cliente():
+    orden_id = request.form['orden_id']
+    vehiculo_id = request.form['vehiculo_id']
+    conductor_id = request.form['conductor_id']
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # Actualiza la orden a 'En curso'
+    cur.execute("""
+        UPDATE ordenes SET estado_envio='En curso', vehiculo_id=%s, conductor_id=%s WHERE id=%s
+    """, (vehiculo_id, conductor_id, orden_id))
+
+    # Marca vehículo como no disponible
+    cur.execute("UPDATE vehiculos SET disponible=0 WHERE id=%s", (vehiculo_id,))
+
+    conn.commit()
+
+    # Obtener correo cliente
+    cur.execute("SELECT u.correo FROM ordenes o JOIN usuarios u ON o.cliente_id=u.id WHERE o.id=%s", (orden_id,))
+    cliente_correo = cur.fetchone()[0]
+
+    cur.close()
+    conn.close()
+
+    # Enviar correo al cliente
+    msg = Message(
+        subject="Tu pedido está en camino",
+        recipients=[cliente_correo],
+        body="Tu pedido de polímero ya ha sido asignado y está en camino."
+    )
+    mail.send(msg)
+
+    flash("Envío asignado y cliente notificado.", "success")
+    return redirect(url_for('ordenes_pendientes_envio'))
+
+    # GET: mostrar datos + selects
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute("""
+        SELECT 
+          o.id,
+          u.nombre AS cliente_nombre,
+          u.apellido AS cliente_apellido,
+          c.aggrebind AS cantidad_polimero,
+          c.agua      AS cantidad_agua,
+          o.direccion_envio
+        FROM ordenes o
+        JOIN usuarios u ON u.id = o.cliente_id
+        JOIN cotizaciones c ON c.id = o.cotizacion_id
+        WHERE o.id = %s
+    """, (envio_id,))
+    envio = cur.fetchone()
+    cur.close(); conn.close()
+
+    if not envio:
+        flash(f"Orden #{envio_id} no encontrada.", "danger")
+        return redirect(url_for("ordenes_pendientes"))
+
+    vehiculos   = listar_vehiculos(disponibles_solo=True)
+    conductores = listar_conductores()
+
+    return render_template(
+        "admin/asignar_envio.html",
+        envio=envio,
+        vehiculos=vehiculos,
+        conductores=conductores
+    )
+
+
+
+@app.route('/admin/envios_en_curso')
+def envios_en_curso():
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+    cur.execute("""
+        SELECT o.id, u.nombre, u.apellido, v.placa, c.nombre AS conductor, o.direccion_envio
+        FROM ordenes o
+        JOIN usuarios u ON o.cliente_id = u.id
+        JOIN vehiculos v ON o.vehiculo_id = v.id
+        JOIN conductores c ON o.conductor_id = c.id
+        WHERE o.estado_envio = 'En curso'
+    """)
+    envios = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template('admin/envios_en_curso.html', envios=envios)
+
+@app.route('/admin/ordenes_pendientes')
+def ordenes_pendientes():
+    if session.get('rol')!='admin': return redirect(url_for('login'))
+    ordenes=listar_ordenes_pendientes()
+    return render_template('admin/ordenes_pendientes.html', ordenes=ordenes, nombre=session.get('usuario_nombre'))
+@app.route('/admin/envios_asignados', methods=['GET', 'POST'])
+def envios_asignados():
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+
+    if request.method == 'POST':
+        envio_id = request.form['envio_id']
+        nuevo_estado = request.form['estado_envio']
+
+        cur.execute("""
+            UPDATE ordenes
+            SET estado_envio = %s
+            WHERE id = %s
+        """, (nuevo_estado, envio_id))
+
+        conn.commit()
+        flash("Estado del envío actualizado correctamente", "success")
+
+    # Obtén los envíos asignados para mostrar
+    cur.execute("""
+        SELECT o.id, u.nombre, u.apellido, o.direccion_envio, o.estado_envio, v.placa, c.nombre AS conductor
+        FROM ordenes o
+        JOIN usuarios u ON o.cliente_id = u.id
+        JOIN vehiculos v ON o.vehiculo_id = v.id
+        JOIN conductores c ON o.conductor_id = c.id
+        WHERE o.estado_envio IN ('En curso', 'Pendiente', 'En ruta')
+        ORDER BY o.fecha_creacion DESC
+    """)
+
+    envios = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return render_template('admin/envios_asignados.html', envios=envios)
+
+# ------------------------------
+# 7. RUTAS FLASK (Gestión de Envíos)
+# ------------------------------
+@app.route("/")
+def index():
+    return redirect(url_for("login"))
+
+@app.route("/vehiculos/nuevo", methods=["GET", "POST"])
+def agregar_vehiculo_route():
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+
+    if request.method == "POST":
+        tipo      = request.form.get("tipo","").strip()
+        placa     = request.form.get("placa","").strip()
+        capacidad = request.form.get("capacidad_litros","").strip()
+
+        # Normalización
+        tipo = tipo.lower().replace(" ", "_")
+
+        if not tipo or not placa or not capacidad.isdigit():
+            flash("Todos los campos son obligatorios y válidos.", "danger")
+        else:
+            ok = agregar_vehiculo(tipo, placa, int(capacidad))
+            if ok:
+                flash("Vehículo agregado con éxito.", "success")
+            else:
+                flash("Error al agregar vehículo.", "danger")
+        return redirect(url_for("agregar_vehiculo_route"))
+
+        if not (6 <= len(placa) <= 10):
+          flash("La placa debe tener entre 6 y 10 caracteres.", "danger")
+        return redirect(url_for("agregar_vehiculo_route"))
+
+
+    cur.execute("SELECT * FROM vehiculos ORDER BY id DESC")
+    vehiculos = cur.fetchall()
+    cur.close(); conn.close()
+
+    return render_template("gestion_envios/agregar_vehiculo.html", vehiculos=vehiculos)
+
+
+
+@app.route("/vehiculos/eliminar", methods=["POST"])
+def eliminar_vehiculo():
+    vehiculo_id = request.form.get("vehiculo_id")
+    if not vehiculo_id:
+        flash("Debes seleccionar un vehículo válido.", "warning")
+        return redirect(url_for("agregar_vehiculo_route"))
+
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+
+    try:
+        # ¿Está asignado a algún envío activo?
+        cur.execute("""
+            SELECT COUNT(*) AS total FROM envios
+            WHERE vehiculo_id = %s AND estado IN ('Pendiente', 'En ruta')
+        """, (vehiculo_id,))
+        if cur.fetchone()["total"] > 0:
+            flash("❌ No se puede eliminar: el vehículo está asignado a un envío activo.", "danger")
+        else:
+            cur.execute("DELETE FROM vehiculos WHERE id = %s", (vehiculo_id,))
+            conn.commit()
+            flash("✅ Vehículo eliminado correctamente.", "success")
+    except:
+        flash("⚠️ Error al eliminar el vehículo.", "danger")
+    finally:
+        cur.close(); conn.close()
+
+    return redirect(url_for("agregar_vehiculo_route"))
+
+
+
+
+    
+@app.route("/conductores/nuevo", methods=["GET", "POST"])
+def agregar_conductor_route():
+    if request.method == "POST":
+        nombre   = request.form.get("nombre", "").strip()
+        cedula   = request.form.get("cedula", "").strip()
+        telefono = request.form.get("telefono", "").strip()
+
+        if not nombre or not cedula or not telefono:
+            flash("Todos los campos son obligatorios", "danger")
+        elif len(nombre) < 2 or len(nombre) > 20:
+            flash("El nombre debe tener entre 2 y 20 letras", "danger")
+        elif not cedula.isdigit() or len(cedula) != 10:
+            flash("La cédula debe tener exactamente 10 números", "danger")
+        elif not telefono.isdigit() or not (7 <= len(telefono) <= 10):
+            flash("El teléfono debe tener entre 7 y 10 números", "danger")
+        else:
+            ok = agregar_conductor(nombre, cedula, telefono)
+            if ok:
+                flash("Conductor agregado exitosamente", "success")
+            else:
+                flash("Error al agregar conductor", "danger")
+        return redirect(url_for("agregar_conductor_route"))
+
+    # GET: mostrar también los disponibles
+    conductores = listar_conductores()
+    return render_template("gestion_envios/agregar_conductor.html", conductores=conductores)
+
+
+
+
+@app.route("/conductores/eliminar", methods=["POST"])
+def eliminar_conductor_route():
+    conductor_id = request.form.get("conductor_id")
+    if not conductor_id:
+        flash("Debes seleccionar un conductor válido.", "warning")
+        return redirect(url_for("agregar_conductor_route"))
+
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+
+    try:
+        # ¿Está asignado a algún envío activo?
+        cur.execute("""
+            SELECT COUNT(*) AS total FROM envios
+            WHERE conductor_id = %s AND estado IN ('Pendiente', 'En ruta')
+        """, (conductor_id,))
+        if cur.fetchone()["total"] > 0:
+            flash("❌ No se puede eliminar: el conductor está asignado a un envío activo.", "danger")
+        else:
+            cur.execute("DELETE FROM conductores WHERE id = %s", (conductor_id,))
+            conn.commit()
+            flash("✅ Conductor eliminado correctamente.", "success")
+    except:
+        flash("⚠️ Error al eliminar el conductor.", "danger")
+    finally:
+        cur.close(); conn.close()
+
+    return redirect(url_for("agregar_conductor_route"))
+
+
+
+
+# ------------------------------
+# RUTAS EXISTENTES DEL APP (Autenticación, Inventario, Cotizaciones, etc.)
+# ------------------------------
+
+#-------- 2. Configuración de Flask-Mail --------------------------------------
 app.config.update(
     MAIL_SERVER='smtp.gmail.com',
     MAIL_PORT=587,
@@ -35,238 +993,831 @@ app.config.update(
 )
 mail = Mail(app)
 
-@app.route('/')
-def home():
-    return redirect(url_for('login'))
+#-------- 2.1. FUNCIONES DE INVENTARIO ---------------------------------------
+def obtener_inventario_disponible():
+    """
+    Obtiene el inventario total disponible actual
+    """
+    conn = get_db_connection()
+    if not conn:
+        return 0
+    cur = conn.cursor(dictionary=True)
+    cur.execute("SELECT SUM(entrada_inventario) as total_entradas, SUM(salida_inventario) as total_salidas FROM inventario")
+    result = cur.fetchone()
+    cur.close()
+    conn.close()
+    entradas = float(result['total_entradas']) if result['total_entradas'] else 0.0
+    salidas = float(result['total_salidas']) if result['total_salidas'] else 0.0
+    return entradas - salidas
 
-# ====================== LOGIN ==========================
-@app.route('/login', methods=['GET', 'POST'])
+def validar_stock_disponible(cantidad_requerida):
+    """
+    Valida si hay suficiente stock para la cotización
+    """
+    stock_actual = obtener_inventario_disponible()
+    return stock_actual >= cantidad_requerida
+
+def reducir_inventario(cantidad_utilizada):
+    """
+    Reduce el inventario cuando se aprueba una cotización
+    """
+    conn = get_db_connection()
+    if not conn:
+        return
+    cur = conn.cursor()
+    # Insertar movimiento de salida (cantidad negativa)
+    cur.execute("""
+        INSERT INTO inventario (total_inventario, salida_inventario, fecha, fecha_creacion, fecha_actualizacion)
+        VALUES (%s, %s, %s, NOW(), NOW())
+    """, (-cantidad_utilizada, cantidad_utilizada, datetime.now().date()))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+#-------- 3. Rutas de Autenticación -------------------------------------------
+@app.route('/login', methods=['GET','POST'])
 def login():
     if request.method == 'POST':
-        correo = request.form['correo']
-        contrasena = request.form['contrasena']
+        correo = request.form['correo'].strip()
+        contrasena = request.form['contrasena'].strip()
+
+        if not correo or not contrasena:
+            flash('Debes completar todos los campos.', 'danger')
+            return redirect(url_for('login'))
+
         conn = get_db_connection()
         cur = conn.cursor(dictionary=True)
-        cur.execute("SELECT * FROM usuarios WHERE correo = %s", (correo,))
+        cur.execute("SELECT * FROM usuarios WHERE correo=%s", (correo,))
         usuario = cur.fetchone()
         cur.close()
         conn.close()
-        if usuario and check_password_hash(usuario['contrasena'], contrasena):
-            session['usuario_id'] = usuario['id']
-            session['nombre'] = usuario['nombre']
-            session['rol'] = usuario['rol']
-            return redirect(url_for('calculadora'))
-        flash('Correo o contraseña incorrectos', 'error')
+
+        if not usuario:
+            flash('El correo no está registrado.', 'danger')
+            return redirect(url_for('login'))
+
+        if not check_password_hash(usuario['contrasena'], contrasena):
+            flash('La contraseña es incorrecta.', 'danger')
+            return redirect(url_for('login'))
+
+        # Inicio de sesión exitoso
+        session['usuario_id'] = usuario['id']
+        session['nombre']     = usuario['nombre']
+        session['rol']        = usuario['rol']
+        if usuario['rol'] == 'admin':
+            return redirect(url_for('admin_panel'))
+        return redirect(url_for('calculadora'))
+
     return render_template('login.html')
 
-# ====================== REGISTRO ========================
-@app.route('/registro', methods=['GET', 'POST'])
+@app.route('/registro', methods=['GET','POST'])
 def registro():
     if request.method == 'POST':
-        nombre = request.form['nombre'].strip().capitalize()
-        apellido = request.form['apellido'].strip().capitalize()
-        correo = request.form['correo'].strip()
-        contrasena = request.form['contrasena']
+        nombre      = request.form['nombre'].strip().capitalize()
+        apellido    = request.form['apellido'].strip().capitalize()
+        correo      = request.form['correo'].strip()
+        contrasena  = request.form['contrasena']
+
         if len(contrasena) < 6:
-            flash('La contraseña debe tener al menos 6 caracteres.', 'error')
+            flash('La contraseña debe tener al menos 6 caracteres.', 'danger')
             return redirect(url_for('registro'))
+
         conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM usuarios WHERE correo = %s", (correo,))
+        cur  = conn.cursor()
+        cur.execute("SELECT 1 FROM usuarios WHERE correo=%s", (correo,))
         if cur.fetchone():
-            flash('El correo ya está registrado.', 'error')
-            cur.close(); conn.close()
+            flash('El correo ya está registrado.', 'danger')
+            cur.close()
+            conn.close()
             return redirect(url_for('registro'))
-        contrasena_hash = generate_password_hash(contrasena)
-        rol = 'cliente'
+
+        hash_ = generate_password_hash(contrasena)
         cur.execute(
-            "INSERT INTO usuarios (nombre, apellido, correo, contrasena, rol) VALUES (%s,%s,%s,%s,%s)",
-            (nombre, apellido, correo, contrasena_hash, rol)
+            "INSERT INTO usuarios (nombre,apellido,correo,contrasena,rol) "
+            "VALUES (%s,%s,%s,%s,%s)",
+            (nombre, apellido, correo, hash_, 'cliente')
         )
         conn.commit()
-        cur.close(); conn.close()
-        flash('Usuario registrado con éxito', 'mensaje')
+        cur.close()
+        conn.close()
+
+        flash('Usuario registrado con éxito', 'success')
         return redirect(url_for('login'))
+
     return render_template('registro.html')
 
-# ====================== CALCULADORA =====================
+#-------- 4. Calculadora & Cotización -----------------------------------------
 @app.route('/calculadora')
 def calculadora():
     if 'usuario_id' not in session:
         return redirect(url_for('login'))
-    return render_template('calculadora.html')
+    
+    # Obtener inventario disponible para mostrar al cliente
+    inventario_disponible = obtener_inventario_disponible()
+    
+    return render_template('calculadora.html', inventario_disponible=inventario_disponible)
 
-# ====================== COTIZACIÓN ======================
+import math  # ya está importado arriba
+
 @app.route('/cotizar', methods=['POST'])
 def cotizar():
     if 'usuario_id' not in session:
-        return jsonify(success=False, message="No estás autenticado.")
-    conn = get_db_connection()
-    cur = conn.cursor(dictionary=True)
+        return jsonify(success=False, message="No estás autenticado"), 401
+
+    # Leer dimensiones
+    largo = float(request.form['largo'])
+    ancho = float(request.form['ancho'])
+    profundidad = float(request.form['profundidad'])
+
+    volumen = largo * ancho * profundidad
+
+    POLY_FACTOR  = 4.0
+    WATER_FACTOR = 1.3
+    PRECIO_POLIMERO_POR_LITRO = 15000
+
+    aggrebind_necesario = math.ceil(POLY_FACTOR * volumen)  # redondeado
+    agua_necesaria = math.ceil(WATER_FACTOR * volumen)
+    total_en_dinero = aggrebind_necesario * PRECIO_POLIMERO_POR_LITRO
+
+    # Validar inventario disponible
+    if not validar_stock_disponible(aggrebind_necesario):
+        inventario_actual = obtener_inventario_disponible()
+        return jsonify(
+            success=False, 
+            message=f"Inventario insuficiente. Disponible: {inventario_actual:.2f}L, Requerido: {aggrebind_necesario}L"
+        ), 400
+
     # Verificar cotización pendiente
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
     cur.execute(
-        "SELECT * FROM cotizaciones WHERE cliente_id=%s AND habilitado=FALSE",
+        "SELECT 1 FROM cotizaciones WHERE cliente_id=%s AND habilitado=FALSE",
         (session['usuario_id'],)
     )
     if cur.fetchone():
-        cur.close(); conn.close()
-        return jsonify(success=False, message="Ya tienes una cotización pendiente.")
-    # Datos calculados
-    datos = {k: float(request.form[k]) for k in ('largo','ancho','profundidad','aggrebind','agua','total')}
-    cur = conn.cursor()
+        cur.close()
+        conn.close()
+        return jsonify(success=False, message="Ya tienes una cotización pendiente."), 400
+
+    # Insertar en la base de datos
     cur.execute("""
-        INSERT INTO cotizaciones
-          (cliente_id,longitud,ancho,profundidad,aggrebind,agua,total,habilitado)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+        INSERT INTO cotizaciones 
+          (cliente_id, longitud, ancho, profundidad, aggrebind, agua, total, habilitado)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """, (
         session['usuario_id'],
-        datos['largo'], datos['ancho'], datos['profundidad'],
-        datos['aggrebind'], datos['agua'], datos['total'],
+        largo, ancho, profundidad,
+        aggrebind_necesario,
+        agua_necesaria,
+        total_en_dinero,
         False
     ))
     conn.commit()
-    cur.close(); conn.close()
-    return jsonify(success=True, message="Cotización enviada con éxito al administrador.")
+    cur.close()
+    conn.close()
 
-# ================= NOTIFICACIONES ======================
-# app.py (fragmento)
+    return jsonify(
+        success=True,
+        message=f"Cotización enviada: Total ${total_en_dinero:.2f}. Pendiente de aprobación."
+    )
 
-# … rutas anteriores …
 
-# ---------------- NOTIFICACIONES ----------------
-@app.route('/notificaciones')
-def notificaciones():
+
+@app.route('/dashboard')
+def dashboard():
     if 'usuario_id' not in session:
-        flash('Debes iniciar sesión primero.', 'error')
+        return redirect(url_for('login'))
+    return render_template('calculadora.html', nombre=session['nombre'])
+
+# Umbrales para destacar filas
+UMBRAL_CRITICO = 500    # litros para marcar salida crítica
+UMBRAL_STOCK = 1000     # litros mínimos antes de alerta de stock bajo
+
+# Umbrales para destacar filas
+UMBRAL_CRITICO = 500    # litros para marcar salida crítica
+UMBRAL_STOCK = 1000     # litros mínimos antes de alerta de stock bajo
+
+#-------- 5. GESTIÓN DE INVENTARIO (SOLO ADMIN) -----------------------------
+@app.route('/admin/inventario')
+def gestionar_inventario():
+    if session.get('rol') != 'admin':
         return redirect(url_for('login'))
 
-    conexion = get_db_connection()
-    cursor = conexion.cursor(dictionary=True)
-    cursor.execute("""
-        SELECT mensaje, fecha
-        FROM notificaciones
-        WHERE usuario_id = %s
-        ORDER BY fecha DESC
-    """, (session['usuario_id'],))
-    notis = cursor.fetchall()
-    cursor.close()
-    conexion.close()
-
-    return render_template('notificaciones.html', notificaciones=notis)
-
-    return render_template('notificaciones.html', notificaciones=notis)
-
-
-# =========== COTIZACIONES PENDIENTES ===============
-@app.route('/ver_cotizaciones_pendientes')
-def ver_cotizaciones_pendientes():
-    if 'usuario_id' not in session:
-        flash('Debes iniciar sesión primero.', 'error')
-        return redirect(url_for('login'))
     conn = get_db_connection()
     cur = conn.cursor(dictionary=True)
+
+    # Historial ordenado (más reciente primero)
     cur.execute("""
-        SELECT id,longitud,ancho,profundidad,total
+        SELECT *
+        FROM inventario
+        ORDER BY fecha DESC, fecha_creacion DESC
+    """)
+    historial = cur.fetchall()
+
+    # Total acumulado
+    cur.execute("""
+        SELECT 
+            IFNULL(SUM(entrada_inventario), 0) AS total_entradas,
+            IFNULL(SUM(salida_inventario), 0) AS total_salidas
+        FROM inventario
+    """)
+    resultado = cur.fetchone()
+    entradas = float(resultado['total_entradas'])
+    salidas = float(resultado['total_salidas'])
+    total = entradas - salidas
+
+    # Métricas diarias
+    # Agregado hoy
+    cur.execute("SELECT IFNULL(SUM(entrada_inventario), 0) AS agregado_hoy FROM inventario WHERE DATE(fecha) = CURDATE()")
+    agregado_hoy = float(cur.fetchone()['agregado_hoy'])
+    # Eliminado hoy
+    cur.execute("SELECT IFNULL(SUM(salida_inventario), 0) AS eliminado_hoy FROM inventario WHERE DATE(fecha) = CURDATE()")
+    eliminado_hoy = float(cur.fetchone()['eliminado_hoy'])
+
+    # Consumo promedio diario (últimos 7 días)
+    cur.execute("""
+        SELECT AVG(daily.salidas) AS consumo_promedio FROM (
+            SELECT DATE(fecha) AS dia, SUM(salida_inventario) AS salidas
+            FROM inventario
+            WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            GROUP BY DATE(fecha)
+        ) AS daily
+    """)
+    consumo_promedio = round(float(cur.fetchone()['consumo_promedio'] or 0), 2)
+
+    cur.close()
+    conn.close()
+
+    # Datos para la gráfica (ejemplo con historial reciente)
+    history_labels = [item['fecha'].strftime('%d/%m') for item in historial[::-1]]
+    history_values = [item['total_inventario'] for item in historial[::-1]]
+
+    return render_template(
+        'gestionar_inventario.html',
+        historial=historial,
+        total=total,
+        agregado_hoy=agregado_hoy,
+        eliminado_hoy=eliminado_hoy,
+        consumo_promedio=consumo_promedio,
+        history_labels=history_labels,
+        history_values=history_values,
+        umbral_critico=UMBRAL_CRITICO,
+        umbral_stock=UMBRAL_STOCK
+    )
+
+@app.route('/admin/agregar_inventario', methods=['POST'])
+def agregar_inventario():
+    if session.get('rol') != 'admin':
+        return jsonify(success=False, message="Acceso denegado"), 403
+
+    try:
+        cantidad = float(request.form['cantidad'])
+        if cantidad <= 0:
+            flash('La cantidad debe ser mayor a 0', 'danger')
+            return redirect(url_for('gestionar_inventario'))
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO inventario (
+                total_inventario,
+                entrada_inventario,
+                fecha,
+                fecha_creacion,
+                fecha_actualizacion
+            ) VALUES (%s, %s, NOW(), NOW(), NOW())
+            """, (cantidad, cantidad)
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        flash(f'Inventario actualizado: +{cantidad}L agregados', 'success')
+        return redirect(url_for('gestionar_inventario'))
+
+    except ValueError:
+        flash('Cantidad inválida', 'danger')
+        return redirect(url_for('gestionar_inventario'))
+    except Exception:
+        flash('Error al agregar inventario', 'danger')
+        return redirect(url_for('gestionar_inventario'))
+
+@app.route('/admin/eliminar_inventario', methods=['POST'])
+def eliminar_inventario():
+    if session.get('rol') != 'admin':
+        flash('Acceso denegado', 'danger')
+        return redirect(url_for('login'))
+
+    # 1. Leer cantidad
+    try:
+        cantidad = float(request.form['cantidad'])
+    except (ValueError, KeyError):
+        flash('Cantidad inválida.', 'danger')
+        return redirect(url_for('gestionar_inventario'))
+
+    # 2. Leer categoría y razón
+    categoria = request.form.get('categoria', '').strip()
+    razon     = request.form.get('razon', '').strip()
+    if not categoria or not razon:
+        flash('Debes indicar categoría y describir la razón de la eliminación.', 'danger')
+        return redirect(url_for('gestionar_inventario'))
+
+    # 3. Conexión y verificación de stock
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+
+    cur.execute("""
+        SELECT 
+          COALESCE(SUM(entrada_inventario),0) AS entradas,
+          COALESCE(SUM(salida_inventario),0)  AS salidas
+        FROM inventario
+    """)
+    res    = cur.fetchone()
+    actual = float(res['entradas']) - float(res['salidas'])
+    if cantidad > actual:
+        cur.close()
+        conn.close()
+        flash(f'No hay suficiente inventario. Disponible: {actual:.2f} L.', 'danger')
+        return redirect(url_for('gestionar_inventario'))
+
+    # 4. Registrar salida en inventario
+    nuevo_total = actual - cantidad
+    cur.execute(
+        """
+        INSERT INTO inventario (
+          total_inventario,
+          salida_inventario,
+          fecha,
+          fecha_creacion,
+          fecha_actualizacion
+        ) VALUES (%s, %s, NOW(), NOW(), NOW())
+        """,
+        (nuevo_total, cantidad)
+    )
+    conn.commit()
+
+    # 5. (Opcional) Si tienes tabla 'eliminaciones', guarda allí categoría y razón:
+    # cur.execute(
+    #     "INSERT INTO eliminaciones (cantidad, categoria, razon, fecha) VALUES (%s, %s, %s, NOW())",
+    #     (cantidad, categoria, razon)
+    # )
+    # conn.commit()
+
+    cur.close()
+    conn.close()
+
+    flash(f'Se eliminaron {cantidad} L. Categoría: {categoria}.', 'success')
+    return redirect(url_for('gestionar_inventario'))
+
+@app.route('/admin/inventario/export_excel')
+def export_excel():
+    # 1) Traer los datos de la base
+    conn = get_db_connection()
+    df = pd.read_sql(
+        "SELECT fecha, entrada_inventario, salida_inventario, total_inventario "
+        "FROM inventario ORDER BY fecha DESC",
+        conn
+    )
+    conn.close()
+
+    # 2) Volcarlos en un Excel en memoria
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Inventario')
+    output.seek(0)
+
+    # 3) Devolver como descarga
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name='inventario.xlsx',
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+@app.route('/admin/inventario/export_pdf')
+def export_pdf():
+    # 1) Obtener filas de la tabla
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT fecha, entrada_inventario, salida_inventario, total_inventario "
+        "FROM inventario ORDER BY fecha DESC"
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    # 2) Crear PDF en memoria usando ReportLab
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    elements = [Paragraph("Historial de Inventario AggreBind", styles['Heading1'])]
+
+    # Cabecera + datos
+    data = [['Fecha y hora', 'Entrada (L)', 'Salida (L)', 'Total (L)']]
+    for fecha, ent, sal, tot in rows:
+        data.append([
+            fecha.strftime('%Y-%m-%d %H:%M:%S'),
+            f"{ent:.2f}",
+            f"{sal:.2f}",
+            f"{tot:.2f}"
+        ])
+
+    table = Table(data, hAlign='CENTER')
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.darkgreen),
+        ('TEXTCOLOR',(0,0),(-1,0),colors.whitesmoke),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+        ('ALIGN',(1,1),(-1,-1),'CENTER'),
+    ]))
+    elements.append(table)
+
+    doc.build(elements)
+    buffer.seek(0)
+
+    # 3) Devolver como descarga
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name='inventario.pdf',
+        mimetype='application/pdf'
+    )
+@app.route('/api/inventario/actual')
+def api_inventario_actual():
+    inventario = obtener_inventario_disponible()
+    return jsonify({
+        'inventario_disponible': inventario,
+        'timestamp': datetime.now().isoformat()
+    })
+
+#-------- 6. Eliminar cotización (admin o cliente) --------------------------
+@app.route('/eliminar_cotizacion/<int:id>', methods=['POST'])
+def eliminar_cotizacion(id):
+    if 'usuario_id' not in session:
+        flash('Debes iniciar sesión primero.', 'danger')
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+
+    if session.get('rol') == 'admin':
+        # Admin elimina cualquier cotización
+        cur.execute("DELETE FROM cotizaciones WHERE id = %s", (id,))
+        conn.commit()
+        cur.close(); conn.close()
+        flash(f'Cotización #{id} eliminada correctamente', 'success')
+        return redirect(url_for('ver_cotizaciones'))
+
+    # Cliente solo su propia cotización pendiente
+    cur.execute(
+        "SELECT cliente_id FROM cotizaciones WHERE id = %s AND habilitado = FALSE",
+        (id,)
+    )
+    fila = cur.fetchone()
+    if not fila or fila['cliente_id'] != session['usuario_id']:
+        cur.close(); conn.close()
+        flash('No puedes eliminar esta cotización', 'danger')
+        return redirect(url_for('mis_cotizaciones_pendientes'))
+
+    cur.execute("DELETE FROM cotizaciones WHERE id = %s", (id,))
+    conn.commit()
+    cur.close(); conn.close()
+    flash('Tu cotización ha sido eliminada', 'success')
+    return redirect(url_for('mis_cotizaciones_pendientes'))
+
+#-------- 7. Panel del Admin -------------------------------------------------
+@app.route('/admin/panel')
+def admin_panel():
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
+    
+    # Obtener estadísticas para el dashboard
+    inventario_actual = obtener_inventario_disponible()
+    
+    return render_template('admin_panel.html', 
+                         nombre=session['nombre'],
+                         inventario_actual=inventario_actual)
+
+@app.route('/admin/gestionar_admins', methods=['GET','POST'])
+def gestionar_admins():
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+
+    if request.method == 'POST':
+        nombre = request.form['nombre'].strip()
+        correo = request.form['correo'].strip()
+        contrasena = request.form['contrasena'].strip()
+
+        # Validación del nombre
+        if not re.fullmatch(r"[A-Za-zÁÉÍÓÚáéíóúÑñ]{2,20}", nombre):
+            flash('El nombre debe tener entre 2 y 20 letras (sin espacios ni números)', 'danger')
+            return redirect(url_for('gestionar_admins'))
+
+        # Validación del correo
+        correo_regex = r"^[A-Za-z0-9]{3,30}@[A-Za-z]{3,10}\.(com|COM|es|ES)$"
+        if not re.fullmatch(correo_regex, correo):
+            flash('Correo inválido. Debe seguir el formato usuario@dominio.com o .es', 'danger')
+            return redirect(url_for('gestionar_admins'))
+
+        # Validación de contraseña
+        if not re.fullmatch(r"(?=.*[A-Z])(?=(.*\d){2,}).{6,10}", contrasena):
+            flash('La contraseña debe tener de 6 a 10 caracteres, al menos 1 mayúscula y 2 números.', 'danger')
+            return redirect(url_for('gestionar_admins'))
+
+        hash_ = generate_password_hash(contrasena)
+        cur.execute(
+            "INSERT INTO usuarios (nombre,correo,contrasena,rol) VALUES (%s,%s,%s,'admin')",
+            (nombre, correo, hash_)
+        )
+        conn.commit()
+        flash('Administrador creado exitosamente', 'success')
+
+    cur.execute("SELECT id,nombre,correo FROM usuarios WHERE rol='admin'")
+    admins = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return render_template('gestionar_admins.html', admins=admins, mi_id=session['usuario_id'])
+
+
+@app.route('/admin/eliminar_admin/<int:id>', methods=['POST'])
+def eliminar_admin(id):
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
+    if id == session['usuario_id']:
+        flash('No puedes eliminar tu propia cuenta', 'danger')
+        return redirect(url_for('gestionar_admins'))
+
+    conn = get_db_connection()
+    cur  = conn.cursor()
+    cur.execute("DELETE FROM usuarios WHERE id=%s AND rol='admin'", (id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    flash('Administrador eliminado', 'success')
+    return redirect(url_for('gestionar_admins'))
+
+#--------Admin: Enviar Notificaciones -----------------------------
+@app.route('/admin/enviar_notificaciones', methods=['GET','POST'])
+def enviar_notificaciones():
+    # Solo admin
+    if session.get('rol') != 'admin':
+        flash('Acceso denegado', 'danger')
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+    # Traer todos los clientes
+    cur.execute("SELECT id, nombre, apellido, correo FROM usuarios WHERE rol IN ('cliente','usuario')")
+    clientes = cur.fetchall()
+
+    if request.method == 'POST':
+        seleccion = request.form.getlist('clientes')   # lista de ids como strings
+        mensaje   = request.form['mensaje'].strip()
+
+        for uid in seleccion:
+            # 1) Guardar notificación en BD
+            cur.execute(
+                "INSERT INTO notificaciones (usuario_id, mensaje, fecha) VALUES (%s, %s, NOW())",
+                (uid, mensaje)
+            )
+            # 2) Obtener correo del cliente
+            cur2 = conn.cursor()
+            cur2.execute("SELECT correo FROM usuarios WHERE id = %s", (uid,))
+            correo_cliente = cur2.fetchone()[0]
+            cur2.close()
+            # 3) Enviar e-mail
+            msg = Message(
+                subject="Tienes una nueva notificación",
+                recipients=[correo_cliente]
+            )
+            msg.body = (
+                f"Un administrador se ha comunicado contigo:\n\n"
+                f"\"{mensaje}\"\n\n"
+                "Por favor, ingresa a tu cuenta y revisa tus notificaciones."
+            )
+            mail.send(msg)
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash('Notificaciones enviadas correctamente', 'success')
+        return redirect(url_for('admin_panel'))
+
+    cur.close()
+    conn.close()
+    return render_template('enviar_notificaciones.html', clientes=clientes)
+
+#-------- 8. Cotizaciones para Admin & Cliente -------------------------------
+@app.route('/ver_cotizaciones')
+def ver_cotizaciones():
+    if session.get('rol') != 'admin':
+        flash('Acceso denegado', 'danger')
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute("""
+        SELECT
+          c.id,
+          c.longitud,
+          c.ancho,
+          c.profundidad,
+          c.aggrebind,         -- litros de polímero
+          c.agua,              -- litros de agua
+          c.total,
+          u.nombre,
+          u.apellido
+        FROM cotizaciones c
+        JOIN usuarios u ON c.cliente_id = u.id
+       WHERE c.habilitado = FALSE
+    ORDER BY c.id DESC
+    """)
+    all_cots = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return render_template('ver_cotizaciones.html', cotizaciones=all_cots)
+
+@app.route('/habilitar_cotizacion/<int:id>')
+def habilitar_cotizacion(id):
+    # Sólo admin puede
+    if session.get('rol') != 'admin':
+        flash('Acceso denegado', 'danger')
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+
+    # 1) Obtener datos de la cotización
+    cur.execute("""
+        SELECT u.correo, c.aggrebind
+          FROM cotizaciones c
+          JOIN usuarios u ON c.cliente_id = u.id
+         WHERE c.id = %s
+    """, (id,))
+    fila = cur.fetchone()
+    if not fila:
+        cur.close()
+        conn.close()
+        flash('Cotización no encontrada', 'danger')
+        return redirect(url_for('ver_cotizaciones'))
+    
+    correo_cliente = fila['correo']
+    cantidad_polimero = fila['aggrebind']
+
+    # 2) Verificar inventario antes de habilitar
+    if not validar_stock_disponible(cantidad_polimero):
+        cur.close()
+        conn.close()
+        flash('No hay suficiente inventario para aprobar esta cotización', 'danger')
+        return redirect(url_for('ver_cotizaciones'))
+
+    # 3) Marcar habilitada y reducir inventario
+    cur.execute("UPDATE cotizaciones SET habilitado=TRUE WHERE id=%s", (id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    
+    # Reducir inventario
+    reducir_inventario(cantidad_polimero)
+
+    # 4) Enviar correo al cliente
+    msg = Message(
+        subject="Tu cotización ha sido aceptada",
+        recipients=[correo_cliente]
+    )
+    msg.body = (
+        f"¡Hola!\n\n"
+        f"Tu cotización #{id} ha sido aceptada con éxito. Ya puedes iniciar el proceso de compra.\n\n"
+        f"Saludos,\nEquipo Polímeros S.A."
+    )
+    mail.send(msg)
+
+    flash('Cotización habilitada, inventario actualizado y correo enviado al cliente', 'success')
+    return redirect(url_for('ver_cotizaciones'))
+
+#-------- 9. Rutas de Cliente ------------------------------------------------
+@app.route('/mis_cotizaciones_pendientes')
+@app.route('/cliente/cotizaciones_habilitadas', endpoint='cotizaciones_habilitadas_cliente')
+def mis_cotizaciones_pendientes():
+    if 'usuario_id' not in session:
+        flash('Debes iniciar sesión primero.', 'danger')
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute("""
+        SELECT id, longitud, ancho, profundidad, total
           FROM cotizaciones
          WHERE cliente_id=%s AND habilitado=FALSE
          ORDER BY id DESC
     """, (session['usuario_id'],))
     cotizaciones = cur.fetchall()
-    cur.close(); conn.close()
-    return render_template('ver_cotizaciones_pendientes.html', cotizaciones=cotizaciones)
+    cur.close()
+    conn.close()
 
-# ====================== ADMIN: VER ======================
-@app.route('/ver_cotizaciones')
-def ver_cotizaciones():
-    if session.get('rol') != 'administrador':
-        flash('Acceso denegado', 'error')
+    return render_template('ver_cotizaciones_cliente.html', cotizaciones=cotizaciones)
+#-------- 10. Notificaciones --------------------------------------------------
+@app.route('/notificaciones')
+def notificaciones():
+    if 'usuario_id' not in session:
         return redirect(url_for('login'))
-    conn = get_db_connection()
-    cur = conn.cursor(dictionary=True)
-    cur.execute("""
-        SELECT c.*,u.nombre,u.apellido
-          FROM cotizaciones c
-          JOIN usuarios u ON c.cliente_id=u.id
-      ORDER BY c.id DESC
-    """)
-    all_cots = cur.fetchall()
-    cur.close(); conn.close()
-    return render_template('ver_cotizaciones.html', cotizaciones=all_cots)
 
-# ============ ADMIN: HABILITAR =======================
-@app.route('/habilitar_cotizacion/<int:id>')
-def habilitar_cotizacion(id):
-    if session.get('rol') != 'administrador':
-        flash('Acceso denegado', 'error')
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(
+        "SELECT mensaje, fecha "
+        "FROM notificaciones "
+        "WHERE usuario_id=%s "
+        "ORDER BY fecha DESC",
+        (session['usuario_id'],)
+    )
+    notis = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return render_template('notificaciones.html', notificaciones=notis)
+
+#-------- 11. Recuperar y Cambiar Contraseña ----------------------------------
+@app.route('/recuperar_contrasena', methods=['GET','POST'])
+def recuperar_contrasena():
+    if request.method == 'POST':
+        correo = request.form['correo']
+        conn   = get_db_connection()
+        cur    = conn.cursor(dictionary=True)
+        cur.execute("SELECT correo FROM usuarios WHERE correo=%s", (correo,))
+        if cur.fetchone():
+            codigo = random.randint(100000,999999)
+            msg    = Message("Recuperación de contraseña", recipients=[correo])
+            msg.body= f"Tu código de recuperación es: {codigo}"
+            mail.send(msg)
+            cur.execute("UPDATE usuarios SET codigo_recuperacion=%s WHERE correo=%s", (codigo,correo))
+            conn.commit()
+            session['correo_recuperacion'] = correo
+            flash('Código enviado', 'success')
+            cur.close()
+            conn.close()
+            return redirect(url_for('verificar_codigo'))
+        flash('Correo no registrado', 'danger')
+        cur.close()
+        conn.close()
+    return render_template('recuperar_contrasena.html')
+
+@app.route('/verificar_codigo', methods=['GET','POST'])
+def verificar_codigo():
+    if request.method == 'POST':
+        correo = request.form['correo']
+        codigo = request.form['codigo']
+        conn   = get_db_connection()
+        cur    = conn.cursor(dictionary=True)
+        cur.execute(
+            "SELECT 1 FROM usuarios WHERE correo=%s AND codigo_recuperacion=%s",
+            (correo, codigo)
+        )
+        if cur.fetchone():
+            cur.close()
+            conn.close()
+            return redirect(url_for('cambiar_contrasena', correo=correo))
+        flash('Código incorrecto', 'danger')
+        cur.close()
+        conn.close()
+    return render_template('verificar_codigo.html')
+
+@app.route('/cambiar_contrasena/<correo>', methods=['GET','POST'])
+def cambiar_contrasena(correo):
+    if request.method == 'POST':
+        nueva = request.form['nueva_contrasena']
+        if len(nueva) < 6:
+            flash('La nueva contraseña debe tener al menos 6 caracteres.', 'danger')
+            return redirect(request.url)
+        hashp = generate_password_hash(nueva)
+        conn  = get_db_connection()
+        cur   = conn.cursor()
+        cur.execute("UPDATE usuarios SET contrasena=%s WHERE correo=%s", (hashp, correo))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash('Contraseña cambiada con éxito', 'success')
         return redirect(url_for('login'))
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("UPDATE cotizaciones SET habilitado=TRUE WHERE id=%s", (id,))
-    conn.commit()
-    cur.close(); conn.close()
-    flash('Cotización habilitada correctamente', 'mensaje')
-    return redirect(url_for('ver_cotizaciones'))
+    return render_template('cambiar_contrasena.html')
 
-# ====================== LOGOUT ==========================
+#-------- 12. Logout ---------------------------------------------------------
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# ========= RECUPERAR / CAMBIAR CONTRASEÑA =============
-@app.route('/recuperar_contrasena', methods=['GET','POST'])
-def recuperar_contrasena():
-    if request.method == 'POST':
-        correo = request.form['correo']
-        conn = get_db_connection()
-        cur = conn.cursor(dictionary=True)
-        cur.execute("SELECT correo FROM usuarios WHERE correo=%s", (correo,))
-        if cur.fetchone():
-            codigo = random.randint(100000,999999)
-            msg = Message("Recuperación", recipients=[correo])
-            msg.body = f"Tu código: {codigo}"
-            mail.send(msg)
-            cur.execute("UPDATE usuarios SET codigo_recuperacion=%s WHERE correo=%s", (codigo,correo))
-            conn.commit()
-            cur.close(); conn.close()
-            session['correo_recuperacion']=correo
-            flash('Código enviado.', 'mensaje')
-            return redirect(url_for('verificar_codigo'))
-        flash('Correo no registrado.', 'error')
-        cur.close(); conn.close()
-    return render_template('recuperar_contrasena.html')
-
-@app.route('/verificar_codigo', methods=['GET','POST'])
-def verificar_codigo():
-    if request.method=='POST':
-        correo = request.form['correo']
-        codigo = request.form['codigo']
-        conn = get_db_connection()
-        cur = conn.cursor(dictionary=True)
-        cur.execute("SELECT * FROM usuarios WHERE correo=%s AND codigo_recuperacion=%s", (correo,codigo))
-        if cur.fetchone():
-            cur.close(); conn.close()
-            return redirect(url_for('cambiar_contrasena', correo=correo))
-        flash('Código incorrecto','error')
-        cur.close(); conn.close()
-    return render_template('verificar_codigo.html')
-
-@app.route('/cambiar_contrasena/<correo>', methods=['GET','POST'])
-def cambiar_contrasena(correo):
-    if request.method=='POST':
-        nueva = request.form['nueva_contrasena']
-        if len(nueva)<6:
-            flash('Debe tener 6+ carácteres.','error')
-            return redirect(request.url)
-        hashp = generate_password_hash(nueva)
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("UPDATE usuarios SET contrasena=%s WHERE correo=%s", (hashp, correo))
-        conn.commit()
-        cur.close(); conn.close()
-        flash('Contraseña cambiada.','mensaje')
-        return redirect(url_for('login'))
-    return render_template('cambiar_contrasena.html')
+#------------------------------#
+#  FIN DEL APP.PY COMPLETO     #
+#------------------------------#
 
 if __name__ == '__main__':
+    # Descomenta la siguiente línea la primera vez para crear las tablas de Envíos:
+    # crear_tablas()
     app.run(debug=True)

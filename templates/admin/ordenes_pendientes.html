@@ -1,0 +1,46 @@
+{# templates/admin/ordenes_pendientes.html #}
+{% extends "base_admin.html" %}
+
+{% block title %}Órdenes de Envío Pendientes{% endblock %}
+
+{% block navbar_brand %}
+  Órdenes Pendientes
+{% endblock %}
+
+{% block content %}
+<div class="mt-4">
+  {% if ordenes %}
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Cliente</th>
+          <th>Monto</th>
+          <th>Fecha</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in ordenes %}
+        <tr>
+          <td>{{ o.id }}</td>
+          <td>{{ o.cliente_nombre }} {{ o.cliente_apellido }}</td>
+          <td>${{ "%.2f"|format(o.monto) }}</td>
+          <td>{{ o.fecha_creacion.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td>
+            <a href="{{ url_for('asignar_envio_route', envio_id=o.id) }}"
+               class="btn btn-sm btn-primary">
+              Asignar envío
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="alert alert-info">
+      No hay órdenes pendientes de envío.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

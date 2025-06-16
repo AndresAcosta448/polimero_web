@@ -1,0 +1,171 @@
+/* 1. Reset y fondo */
+html, body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Quicksand", sans-serif;
+  font-size: 62.5%;
+  background-image: url(../../static/imagenes/352993-admin.jpg); /* Ajusta la ruta si es necesario */
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* 2. Variables globales */
+:root {
+  --verde: #037903;
+  --verde-claro: #049410;
+  --blanco: #ffffff;
+  --gris-fondo: rgba(255, 255, 255, 0.9);
+  --radio: 12px;
+  --sombra: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --fuente: "Quicksand", sans-serif;
+  --rojo: #e53935;
+  --rojo-oscuro: #c62828;
+}
+
+/* 3. Contenedor principal */
+.container {
+  max-width: 1000px;
+  margin: 5rem auto;
+  padding: 2.5rem 3rem;
+  background: var(--gris-fondo);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  font-family: var(--fuente);
+  box-sizing: border-box;
+}
+
+/* 4. Título */
+.container > h1, .container > h2 {
+  font-size: 2.8rem;
+  color: var(--verde);
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+/* 5. Botón volver */
+a.btn-volver {
+  display: inline-block;
+  font-size: 1.6rem;
+  color: var(--verde);
+  text-decoration: none;
+  margin-bottom: 2rem;
+  transition: color 0.3s ease;
+  border-radius: var(--radio);
+  padding: 0.8rem 1.2rem;
+  background-color: var(--blanco);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  user-select: none;
+}
+
+a.btn-volver:hover {
+  color: var(--verde-claro);
+  background-color: #e6f0e6;
+}
+
+/* 6. Contenedor para tablas con desplazamiento horizontal */
+.tabla-contenedor {
+  overflow-x: auto;
+  margin-bottom: 2rem;
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+
+/* 7. Tabla */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1.4rem;
+  background: var(--blanco);
+}
+
+thead {
+  background-color: var(--verde);
+  color: var(--blanco);
+}
+
+th, td {
+  padding: 1rem;
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+tbody tr:nth-child(even) {
+  background-color: #f0f7f0;
+}
+
+tbody tr:hover {
+  background-color: var(--verde-claro);
+  color: var(--blanco);
+}
+
+/* Botón Pagar */
+.btn-pagar {
+  display: inline-block;
+  background-color: var(--verde);
+  color: var(--blanco);
+  padding: 0.5rem 1rem;
+  border-radius: 0.8rem;
+  font-size: 1.3rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.1s ease;
+  border: none;
+}
+
+.btn-pagar:hover {
+  background-color: var(--verde-claro);
+  transform: translateY(-1px);
+}
+
+/* Estados de pago */
+.text-success {
+  color: #28a745;
+}
+
+.text-warning {
+  color: #ff9800;
+}
+
+.text-muted {
+  color: #888;
+}
+
+/* Mensaje si no hay cotizaciones */
+.container > p {
+  font-size: 1.6rem;
+  color: #555;
+  text-align: center;
+  padding: 2rem;
+  font-style: italic;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .container {
+    margin: 3rem 1rem;
+    padding: 1.5rem 2rem;
+  }
+  .container > h1, .container > h2 {
+    font-size: 2rem;
+  }
+  a.btn-volver {
+    font-size: 1.4rem;
+    padding: 0.6rem 1rem;
+  }
+  table {
+    font-size: 1.2rem;
+  }
+  th, td {
+    padding: 0.8rem;
+  }
+  .container > p {
+    font-size: 1.4rem;
+    padding: 1.5rem 0;
+  }
+}
+
