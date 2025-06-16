@@ -21,6 +21,11 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'clave_secreta_segura')  # también puedes llevarla a .env
 from flask import redirect, url_for
 
+
+@app.route('/admin_panel')
+def admin_panel():
+    # Aquí renderizas tu plantilla de panel de admin:
+    return render_template('base_admin.html')
 @app.route('/')
 def home():
     return redirect(url_for('login'))
