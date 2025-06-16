@@ -18,6 +18,28 @@ app = Flask(__name__)
 app.secret_key = 'clave_secreta_segura'
 
 
+@app.route('/admin/inventario/export_excel')
+def export_excel():
+    # 1) Leer inventario
+    conn = get_db_connection()
+    df = pd.read_sql("SELECT fecha, entrada_inventario, salida_inventario FROM inventario ORDER BY fecha DESC", conn)
+    conn.close()
+
+    # 2) Generar Excel en memoria
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Inventario')
+    output.seek(0)
+
+    # 3) Devolver descarga
+    return send_file(
+        output,
+        attachment_filename='inventario.xlsx',
+        as_attachment=True,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+    
 @app.route('/admin/reportes/compras/pdf')
 def compras_pdf():
     if session.get('rol') != 'admin':
