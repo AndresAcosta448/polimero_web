@@ -39,7 +39,42 @@ def export_excel():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
-    
+    @app.route('/admin/inventario/pdf')
+def descargar_reporte_pdf():
+    # 1) Consulta inventario
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute("SELECT fecha, entrada_inventario, salida_inventario FROM inventario ORDER BY fecha DESC")
+    filas = cur.fetchall()
+    cur.close(); conn.close()
+
+    # 2) Generar PDF en memoria (usando ReportLab)
+    buffer = io.BytesIO()
+    doc    = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    elements = [Paragraph("Reporte de Inventario", styles['Title']), Spacer(1,12)]
+
+    # Tabla
+    data = [["Fecha", "Entradas", "Salidas"]]
+    for r in filas:
+        data.append([r['fecha'].strftime("%Y-%m-%d"), r['entrada_inventario'], r['salida_inventario']])
+    table = Table(data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND',(0,0),(-1,0),colors.lightblue),
+        ('GRID',(0,0),(-1,-1),0.5,colors.grey),
+        ('ALIGN',(1,1),(-1,-1),'CENTER'),
+    ]))
+    elements.append(table)
+    doc.build(elements)
+
+    # 3) Devolver PDF
+    pdf = buffer.getvalue()
+    buffer.close()
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'attachment; filename=inventario.pdf'
+    return response
+
 @app.route('/admin/reportes/compras/pdf')
 def compras_pdf():
     if session.get('rol') != 'admin':
