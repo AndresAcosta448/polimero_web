@@ -19,6 +19,11 @@ load_dotenv(dotenv_path=env_path)
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'clave_secreta_segura')  # también puedes llevarla a .env
+from flask import redirect, url_for
+
+@app.route('/')
+def home():
+    return redirect(url_for('login'))
 
 # 2) Función para obtener conexión usando vars de entorno
 def get_db_connection():
