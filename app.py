@@ -39,7 +39,7 @@ def export_excel():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
-    @app.route('/admin/inventario/pdf')
+@app.route('/admin/inventario/pdf')
 def descargar_reporte_pdf():
     # 1) Consulta inventario
     conn = get_db_connection()
