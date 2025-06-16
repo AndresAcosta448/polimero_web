@@ -12,20 +12,18 @@
 
 <nav class="nav">
   <div class="logo">
-    <img src="../static/imagenes/AggreBind-White-logo (1).png" alt="Logo">
+    <img src="{{ url_for('static', filename='imagenes/AggreBind-White-logo (1).png') }}" alt="Logo">
   </div>
   <div class="main_list">
     <ul>
       <li>
-        <a href="{{ url_for('notificaciones') }}" class="btn-primary">Notificaciones</a>
+        <a href="{{ url_for('dashboard') }}" class="btn-primary">Notificaciones</a>
       </li>
-      <!-- Enlace existente a cotizaciones pendientes -->
       <li>
-        <a href="{{ url_for('mis_cotizaciones_pendientes') }}" class="btn-primary">
+        <a href="{{ url_for('ver_cotizaciones_pendientes') }}" class="btn-primary">
           Cotizaciones Pendientes
         </a>
       </li>
-      <!-- Nuevo enlace para cotizaciones habilitadas (para pagar) -->
       <li>
         <a href="{{ url_for('cotizaciones_habilitadas_cliente') }}" class="btn-primary">
           Cotizaciones para Pago
