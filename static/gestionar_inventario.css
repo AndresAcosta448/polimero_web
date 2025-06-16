@@ -6,7 +6,11 @@ body {
 
 .navbar {
   border-bottom: 2px solid #ccc;
+  position: sticky;
+  top: 0;
+  z-index: 1000; /* asegúrate de que quede por encima del resto */
 }
+
 /* limita el ancho y alto máximo del canvas */
 #chartInventario {
   max-width: 600px !important;
@@ -16,11 +20,6 @@ body {
   margin: 0 auto;
 }
 
-.navbar {
-  position: sticky;
-  top: 0;
-  z-index: 1000; /* asegúrate de que quede por encima del resto */
-}
 .container {
   background: #fff;
   border-radius: 8px;
@@ -85,10 +84,10 @@ table tbody tr:nth-child(even) {
 }
 
 .btn-secondary {
-   background: linear-gradient(135deg, #28a745, #34d058); /* gradiente verde */
-  color: #fff !important; /* letras blancas */
+  background: linear-gradient(135deg, #28a745, #34d058);
+  color: #fff !important;
   border: none;
-  border-radius: 25px; /* forma ovalada */
+  border-radius: 25px;
   padding: 0.5rem 1.2rem;
   font-size: 1rem;
   text-decoration: none;
@@ -98,15 +97,15 @@ table tbody tr:nth-child(even) {
 }
 
 .btn-secondary:hover {
-   background: linear-gradient(135deg, #218838, #28a745); /* tono más oscuro en hover */
+  background: linear-gradient(135deg, #218838, #28a745);
   transform: translateY(-2px);
 }
 
 .btn-success {
-  background: linear-gradient(135deg, #28a745, #34d058); /* gradiente verde */
-  color: #fff !important; /* letras blancas */
+  background: linear-gradient(135deg, #28a745, #34d058);
+  color: #fff !important;
   border: none;
-  border-radius: 25px; /* forma ovalada */
+  border-radius: 25px;
   padding: 0.5rem 1.2rem;
   font-size: 1rem;
   text-decoration: none;
@@ -116,7 +115,7 @@ table tbody tr:nth-child(even) {
 }
 
 .btn-success:hover {
-   background: linear-gradient(135deg, #218838, #28a745); /* tono más oscuro en hover */
+  background: linear-gradient(135deg, #218838, #28a745);
   transform: translateY(-2px);
 }
 
@@ -144,10 +143,10 @@ table tbody tr:nth-child(even) {
 
 /* Botón de Volver con estilo ovalado y verde */
 .btn-dark {
-  background: linear-gradient(135deg, #28a745, #34d058); /* gradiente verde */
-  color: #fff !important; /* letras blancas */
+  background: linear-gradient(135deg, #28a745, #34d058);
+  color: #fff !important;
   border: none;
-  border-radius: 25px; /* forma ovalada */
+  border-radius: 25px;
   padding: 0.5rem 1.2rem;
   font-size: 1rem;
   text-decoration: none;
@@ -157,7 +156,7 @@ table tbody tr:nth-child(even) {
 }
 
 .btn-dark:hover {
-  background: linear-gradient(135deg, #218838, #28a745); /* tono más oscuro en hover */
+  background: linear-gradient(135deg, #218838, #28a745);
   transform: translateY(-2px);
 }
 
@@ -182,5 +181,3 @@ table tbody tr:nth-child(even) {
   font-size: 2rem;
   font-weight: bold;
 }
-
-

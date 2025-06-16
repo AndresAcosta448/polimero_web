@@ -50,7 +50,7 @@
               name="correo"
               placeholder="Correo electrónico"
               required
-              pattern="^[A-Za-z0-9]{3,30}@[A-Za-z]{3,10}\.(com|COM|es|ES)$"
+              pattern="^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.(com|es)$"
               title="Correo inválido. Formato: usuario@dominio.com o .es"
               oninvalid="this.setCustomValidity('Correo inválido. Formato: usuario@dominio.com o .es')"
               oninput="this.setCustomValidity('')"
@@ -104,6 +104,7 @@
           </tbody>
         </table>
       </div>
+
     </div>
   </div>
 </body>
