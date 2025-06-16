@@ -22,6 +22,35 @@ app.secret_key = os.getenv('SECRET_KEY', 'clave_secreta_segura')  # también pue
 from flask import redirect, url_for
 
 
+@app.route('/admin/gestionar_admins', methods=['GET','POST'])
+def gestionar_admins():
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+
+    # Si es POST, crea un nuevo admin
+    if request.method == 'POST':
+        n = request.form['nombre']
+        c = request.form['correo']
+        p = request.form['contrasena']
+        # … validaciones …
+        cur.execute(
+            "INSERT INTO usuarios (nombre,correo,contrasena,rol) VALUES (%s,%s,%s,'admin')",
+            (n, c, generate_password_hash(p))
+        )
+        conn.commit()
+        flash('Administrador creado exitosamente', 'success')
+
+    # Trae la lista de admins
+    cur.execute("SELECT id,nombre,correo FROM usuarios WHERE rol='admin'")
+    admins = cur.fetchall()
+    cur.close(); conn.close()
+
+    return render_template('gestionar_admins.html', admins=admins, mi_id=session['usuario_id'])
+
+
 @app.route('/admin_panel')
 def admin_panel():
     # Aquí renderizas tu plantilla de panel de admin:
