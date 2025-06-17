@@ -628,6 +628,24 @@ def agregar_conductor_route():
 
     return render_template("gestion_envios/agregar_conductor.html")
 
+@app.route("/conductores/<int:id>/eliminar", methods=["POST"])
+def eliminar_conductor_route(id):
+    # Sólo admins pueden
+    if session.get('rol') != 'admin':
+        flash("Acceso denegado", "danger")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cur  = conn.cursor()
+    # Borra el conductor
+    cur.execute("DELETE FROM conductores WHERE id = %s", (id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    flash("Conductor eliminado correctamente.", "success")
+    return redirect(url_for('listar_envios_route'))
+
 # ------------------------------
 # 2. FUNCIONES DE TABLAS (DDL)
 #    (Usar solo si quieres crear tablas desde Python)
