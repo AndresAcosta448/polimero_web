@@ -29,7 +29,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'clave_secreta_segura')
 
 # Configuración de Flask-Mail
-a
+
 app.config.update(
     MAIL_SERVER=os.getenv('MAIL_SERVER', 'smtp.gmail.com'),
     MAIL_PORT=int(os.getenv('MAIL_PORT', 587)),
