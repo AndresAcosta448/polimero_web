@@ -1290,42 +1290,19 @@ def gestionar_inventario():
     umbral_critico = consumo_promedio
     umbral_stock   = consumo_promedio * 3  # p.ej. buffer de 3 días
 
-   # 6) Datos para el gráfico de evolución mensual (cast a float)
+       # 6) Evolución mensual: total_inventario al cierre de cada mes
     cur.execute("""
         SELECT
-            DATE_FORMAT(fecha,'%%Y-%%m') AS mes,
-            SUM(entrada_inventario) AS ent,
-            SUM(salida_inventario)  AS sal
+          DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
+          MAX(total_inventario)            AS total
         FROM inventario
         GROUP BY mes
         ORDER BY mes
     """)
     rows_mes = cur.fetchall()
-    running = 0.0
-    history_labels = []
-    history_values = []
-    for row in rows_mes:
-        ent = float(row['ent'] or 0)
-        sal = float(row['sal'] or 0)
-        running += ent - sal
-        history_labels.append(row['mes'])
-        history_values.append(running)
 
-    cur.close()
-    conn.close()
-
-    return render_template(
-        'gestionar_inventario.html',
-        historial=historial,
-        total=total,
-        agregado_hoy=agregado_hoy,
-        eliminado_hoy=eliminado_hoy,
-        consumo_promedio=consumo_promedio,
-        umbral_critico=umbral_critico,
-        umbral_stock=umbral_stock,
-        history_labels=history_labels,
-        history_values=history_values
-    )
+    history_labels = [row['mes'] for row in rows_mes]
+    history_values = [float(row['total']) for row in rows_mes]
 from datetime import datetime
 
 @app.route('/admin/agregar_inventario', methods=['POST'])
