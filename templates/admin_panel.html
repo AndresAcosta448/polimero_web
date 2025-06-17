@@ -180,26 +180,7 @@
         </div>
       </nav>
 
-      <!-- Menú de Reportes -->
-      <div class="container my-4">
-        <h2 class="text-success mb-4">Menú de Reportes</h2>
-        <div class="row">
-          {% for titulo, ruta, icono in [
-               ('Compras', 'reporte_compras', 'bi-cart-check'),
-               ('Cotizaciones', 'reporte_cotizaciones', 'bi-pencil-square'),
-               ('Envíos', 'reporte_envios', 'bi-truck'),
-               ('Inventario', 'reporte_inventario', 'bi-box-seam')
-             ] %}
-            <div class="col-md-3">
-              <a href="{{ url_for('reporte_compras') }}" class="tarjeta texto-centro texto-decoración-ninguno">
-    Reporte de Compras
-</a>
-
-            </div>
-          {% endfor %}
-        </div>
-      </div>
-
+      
       <!-- Footer -->
       <footer class="bg-dark text-white text-center py-3">
         &copy; 2025 Polímeros S.A. - Panel del Administrador
