@@ -1436,12 +1436,15 @@ def eliminar_inventario():
     return redirect(url_for('gestionar_inventario'))
 
 
-#-------- EXPORTAR A EXCEL -----------------------------
-@app.route('/admin/inventario/export_excel')
-def export_excel():
+# Exportar a Excel — inventario
+@app.route('/admin/inventario/exportar/excel')
+def export_excel_inventario():
     conn = get_db_connection()
-    df   = pd.read_sql("SELECT fecha, entrada_inventario, salida_inventario, total_inventario "
-                       "FROM inventario ORDER BY fecha DESC", conn)
+    df   = pd.read_sql(
+        "SELECT fecha, entrada_inventario, salida_inventario, total_inventario "
+        "FROM inventario ORDER BY fecha DESC",
+        conn
+    )
     conn.close()
 
     output = BytesIO()
@@ -1456,14 +1459,15 @@ def export_excel():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
-
-#-------- EXPORTAR A PDF -----------------------------
-@app.route('/admin/inventario/export_pdf')
-def export_pdf():
+# Exportar a PDF — inventario
+@app.route('/admin/inventario/exportar/pdf')
+def export_pdf_inventario():
     conn = get_db_connection()
     cur  = conn.cursor()
-    cur.execute("SELECT fecha, entrada_inventario, salida_inventario, total_inventario "
-                "FROM inventario ORDER BY fecha DESC")
+    cur.execute(
+        "SELECT fecha, entrada_inventario, salida_inventario, total_inventario "
+        "FROM inventario ORDER BY fecha DESC"
+    )
     rows = cur.fetchall()
     cur.close()
     conn.close()
