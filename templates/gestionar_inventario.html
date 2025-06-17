@@ -21,16 +21,18 @@
     {% include 'sidebar.html' %}
     <div class="flex-fill p-4">
 
-      <!-- Barra superior -->
-      <nav class="navbar navbar-dark bg-dark mb-4">
-        <div class="container-fluid">
-          <span class="navbar-brand">Panel Admin</span>
-          <div class="d-flex align-items-center">
-            <span class="text-white me-3">Bienvenido,</span>
-            <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
-          </div>
-        </div>
-      </nav>
+       <!-- Barra superior -->
+- <nav class="navbar navbar-dark bg-dark mb-4">
++ <!-- Barra superior -->
++ <nav class="navbar navbar-dark bg-dark sticky-top mb-4">
+    <div class="container-fluid">
+      <span class="navbar-brand">Panel Admin</span>
+      <div class="d-flex align-items-center">
+        <span class="text-white me-3">Bienvenido,</span>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
+      </div>
+    </div>
+  </nav>
 
       <h1 class="mb-3 text-success">Gestión de Inventario AggreBind</h1>
 

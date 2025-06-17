@@ -13,7 +13,11 @@ body {
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
-
+.navbar-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 1020; /* o el que necesites para que quede sobre el resto */
+}
 h1, h2, h3 {
   color: #151616;
 }
