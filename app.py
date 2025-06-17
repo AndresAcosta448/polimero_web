@@ -1415,6 +1415,7 @@ def eliminar_inventario():
         return redirect(url_for('gestionar_inventario'))
 
 
+
 @app.route('/api/inventario/actual')
 def api_inventario_actual():
     """
