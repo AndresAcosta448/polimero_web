@@ -1267,7 +1267,6 @@ def dashboard():
 from datetime import datetime, date
 
 #-------- 5. GESTIÓN DE INVENTARIO (SOLO ADMIN) -----------------------------
-#-------- 5. GESTIÓN DE INVENTARIO (SOLO ADMIN) -----------------------------
 @app.route('/admin/inventario')
 def gestionar_inventario():
     if session.get('rol') != 'admin':
@@ -1331,81 +1330,6 @@ def gestionar_inventario():
         history_values=values
     )
 
-
-#-------- AGREGAR INVENTARIO -----------------------------
-@app.route('/admin/inventario')
-def gestionar_inventario():
-    if session.get('rol') != 'admin':
-        return redirect(url_for('login'))
-
-    conn = get_db_connection()
-    cur = conn.cursor(dictionary=True)
-
-    # 1) Historial completo, más reciente primero
-    cur.execute("SELECT * FROM inventario ORDER BY fecha DESC, fecha_creacion DESC")
-    historial = cur.fetchall()
-
-    # 2) Total disponible = entradas − salidas
-    cur.execute("""
-        SELECT
-            IFNULL(SUM(entrada_inventario),0) AS total_entradas,
-            IFNULL(SUM(salida_inventario),0)  AS total_salidas
-        FROM inventario
-    """)
-    res = cur.fetchone()
-    entradas = float(res['total_entradas'])
-    salidas  = float(res['total_salidas'])
-    total    = entradas - salidas
-
-    # 3) Métricas de hoy
-    cur.execute("SELECT IFNULL(SUM(entrada_inventario),0) AS agregado_hoy FROM inventario WHERE DATE(fecha)=CURDATE()")
-    agregado_hoy = float(cur.fetchone()['agregado_hoy'])
-    cur.execute("SELECT IFNULL(SUM(salida_inventario),0) AS eliminado_hoy FROM inventario WHERE DATE(fecha)=CURDATE()")
-    eliminado_hoy = float(cur.fetchone()['eliminado_hoy'])
-
-    # 4) Consumo promedio diario en últimos 7 días
-    cur.execute("""
-        SELECT AVG(d.salidas) AS consumo_promedio FROM (
-            SELECT DATE(fecha) AS dia, SUM(salida_inventario) AS salidas
-            FROM inventario
-            WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-            GROUP BY DATE(fecha)
-        ) d
-    """)
-    consumo_promedio = float(cur.fetchone()['consumo_promedio'] or 0)
-
-    # 5) Umbrales dinámicos
-    umbral_critico = consumo_promedio          # si la salida supera este valor, fila en rojo
-    umbral_stock   = consumo_promedio * 3      # buffer de 3 días
-
-    # 6) Datos para la gráfica: cerramos cada mes con el máximo total_inventario
-    cur.execute("""
-        SELECT
-          DATE_FORMAT(fecha,'%%Y-%%m') AS mes,
-          MAX(total_inventario)            AS total
-        FROM inventario
-        GROUP BY mes
-        ORDER BY mes
-    """)
-    rows_mes = cur.fetchall()
-    history_labels = [r['mes'] for r in rows_mes]
-    history_values = [float(r['total']) for r in rows_mes]
-
-    cur.close()
-    conn.close()
-
-    return render_template(
-        'gestionar_inventario.html',
-        historial=historial,
-        total=total,
-        agregado_hoy=agregado_hoy,
-        eliminado_hoy=eliminado_hoy,
-        consumo_promedio=round(consumo_promedio,2),
-        umbral_critico=umbral_critico,
-        umbral_stock=umbral_stock,
-        history_labels=history_labels,
-        history_values=history_values
-    )
 
 #-------- ELIMINAR INVENTARIO -----------------------------
 @app.route('/admin/eliminar_inventario', methods=['POST'])
