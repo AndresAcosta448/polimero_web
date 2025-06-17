@@ -1,21 +1,23 @@
-from flask import (
-    Flask, render_template, request, redirect, url_for, session,
-    flash, jsonify, send_file
-)
-import mysql.connector
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from mysql.connector import Error
-from flask_mail import Mail, Message
+import os
 import random
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
 import math
-
+import pdfkit
 import pandas as pd
-
 from io import BytesIO
+from datetime import datetime
+from pathlib import Path
 
+from flask import (
+    Flask, render_template, request, redirect, url_for,
+    session, flash, jsonify, send_file
+)
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_mail import Mail, Message
+import mysql.connector
+from mysql.connector import Error
+
+# ReportLab para PDF
+from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import (
     SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -23,7 +25,6 @@ from reportlab.platypus import (
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 
-import pdfkit  
 
 app = Flask(__name__)
 app.secret_key = 'clave_secreta_segura'
