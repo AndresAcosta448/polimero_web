@@ -1,10 +1,10 @@
+from datetime import datetime, date
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 import mysql.connector
 from mysql.connector import Error
 from flask_mail import Mail, Message
 import random
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, date
 import math
 from flask import send_file
 import io
@@ -1255,7 +1255,7 @@ def gestionar_inventario():
         return redirect(url_for('login'))
 
     conn = get_db_connection()
-    cur = conn.cursor(dictionary=True)
+    cur  = conn.cursor(dictionary=True)
 
     # 1) Historial completo
     cur.execute("SELECT * FROM inventario ORDER BY fecha DESC")
@@ -1268,7 +1268,7 @@ def gestionar_inventario():
             IFNULL(SUM(salida_inventario),  0) AS total_salidas
         FROM inventario
     """)
-    res = cur.fetchone()
+    res      = cur.fetchone()
     entradas = float(res['total_entradas'])
     salidas  = float(res['total_salidas'])
     total    = entradas - salidas
@@ -1279,24 +1279,24 @@ def gestionar_inventario():
         "SELECT IFNULL(SUM(entrada_inventario),0) AS agregado FROM inventario WHERE DATE(fecha) = %s",
         (hoy,)
     )
-    agregado_hoy = float(cur.fetchone()['agregado'])
+    agregado_hoy  = float(cur.fetchone()['agregado'])
     cur.execute(
         "SELECT IFNULL(SUM(salida_inventario),0) AS eliminado FROM inventario WHERE DATE(fecha) = %s",
         (hoy,)
     )
     eliminado_hoy = float(cur.fetchone()['eliminado'])
 
-    # 4) Consumo promedio diario (desde el primer registro)
+    # 4) Consumo promedio diario
     if historial:
         primera_fecha = historial[-1]['fecha'].date()
     else:
         primera_fecha = hoy
-    dias = (hoy - primera_fecha).days + 1
-    consumo_promedio = salidas / dias if dias > 0 else 0
+    dias              = (hoy - primera_fecha).days + 1
+    consumo_promedio  = salidas / dias if dias > 0 else 0
 
     # 5) Umbrales dinámicos
     umbral_critico = consumo_promedio
-    umbral_stock   = consumo_promedio * 3  # buffer de 3 días
+    umbral_stock   = consumo_promedio * 3
 
     # 6) Evolución mensual: total_inventario al cierre de cada mes
     cur.execute("""
@@ -1307,7 +1307,7 @@ def gestionar_inventario():
         GROUP BY mes
         ORDER BY mes
     """)
-    rows_mes = cur.fetchall()
+    rows_mes       = cur.fetchall()
     history_labels = [row['mes'] for row in rows_mes]
     history_values = [float(row['total']) for row in rows_mes]
 
