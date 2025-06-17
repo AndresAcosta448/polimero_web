@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Cotizaciones para Pago{% endblock %}
+{% block content %}
+  <h2>Cotizaciones habilitadas para pago</h2>
+  {% if cotizaciones %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th><th>Largo</th><th>Ancho</th><th>Profundidad</th><th>Total</th><th>Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in cotizaciones %}
+        <tr>
+          <td>{{ c.id }}</td>
+          <td>{{ c.longitud }}</td>
+          <td>{{ c.ancho }}</td>
+          <td>{{ c.profundidad }}</td>
+          <td>${{ "{:,.2f}".format(c.total) }}</td>
+          <td>
+            <a href="{{ url_for('pagar_cotizacion', cotizacion_id=c.id) }}" class="btn btn-success btn-sm">
+              Pagar
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No tienes cotizaciones habilitadas para pago.</p>
+  {% endif %}
+{% endblock %}
