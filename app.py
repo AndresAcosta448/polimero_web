@@ -1333,50 +1333,79 @@ def gestionar_inventario():
 
 
 #-------- AGREGAR INVENTARIO -----------------------------
-@app.route('/admin/agregar_inventario', methods=['POST'])
-def agregar_inventario():
+@app.route('/admin/inventario')
+def gestionar_inventario():
     if session.get('rol') != 'admin':
-        return jsonify(success=False, message="Acceso denegado"), 403
+        return redirect(url_for('login'))
 
-    try:
-        cantidad = float(request.form['cantidad'])
-        if cantidad <= 0:
-            flash('La cantidad debe ser mayor a 0', 'danger')
-            return redirect(url_for('gestionar_inventario'))
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
 
-        conn = get_db_connection()
-        cur  = conn.cursor(dictionary=True)
+    # 1) Historial completo, más reciente primero
+    cur.execute("SELECT * FROM inventario ORDER BY fecha DESC, fecha_creacion DESC")
+    historial = cur.fetchall()
 
-        # stock actual
-        cur.execute("""
-            SELECT
-              COALESCE(SUM(entrada_inventario),0) AS entradas,
-              COALESCE(SUM(salida_inventario), 0) AS salidas
+    # 2) Total disponible = entradas − salidas
+    cur.execute("""
+        SELECT
+            IFNULL(SUM(entrada_inventario),0) AS total_entradas,
+            IFNULL(SUM(salida_inventario),0)  AS total_salidas
+        FROM inventario
+    """)
+    res = cur.fetchone()
+    entradas = float(res['total_entradas'])
+    salidas  = float(res['total_salidas'])
+    total    = entradas - salidas
+
+    # 3) Métricas de hoy
+    cur.execute("SELECT IFNULL(SUM(entrada_inventario),0) AS agregado_hoy FROM inventario WHERE DATE(fecha)=CURDATE()")
+    agregado_hoy = float(cur.fetchone()['agregado_hoy'])
+    cur.execute("SELECT IFNULL(SUM(salida_inventario),0) AS eliminado_hoy FROM inventario WHERE DATE(fecha)=CURDATE()")
+    eliminado_hoy = float(cur.fetchone()['eliminado_hoy'])
+
+    # 4) Consumo promedio diario en últimos 7 días
+    cur.execute("""
+        SELECT AVG(d.salidas) AS consumo_promedio FROM (
+            SELECT DATE(fecha) AS dia, SUM(salida_inventario) AS salidas
             FROM inventario
-        """)
-        fila   = cur.fetchone()
-        actual = float(fila['entradas']) - float(fila['salidas'])
+            WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            GROUP BY DATE(fecha)
+        ) d
+    """)
+    consumo_promedio = float(cur.fetchone()['consumo_promedio'] or 0)
 
-        # nuevo total y registro con hora
-        nuevo_total = actual + cantidad
-        ahora       = datetime.now()
-        cur.execute("""
-            INSERT INTO inventario
-              (total_inventario, entrada_inventario, fecha, fecha_creacion, fecha_actualizacion)
-            VALUES (%s, %s, %s, NOW(), NOW())
-        """, (nuevo_total, cantidad, ahora))
+    # 5) Umbrales dinámicos
+    umbral_critico = consumo_promedio          # si la salida supera este valor, fila en rojo
+    umbral_stock   = consumo_promedio * 3      # buffer de 3 días
 
-        conn.commit()
-        cur.close()
-        conn.close()
+    # 6) Datos para la gráfica: cerramos cada mes con el máximo total_inventario
+    cur.execute("""
+        SELECT
+          DATE_FORMAT(fecha,'%%Y-%%m') AS mes,
+          MAX(total_inventario)            AS total
+        FROM inventario
+        GROUP BY mes
+        ORDER BY mes
+    """)
+    rows_mes = cur.fetchall()
+    history_labels = [r['mes'] for r in rows_mes]
+    history_values = [float(r['total']) for r in rows_mes]
 
-        flash(f'Inventario actualizado: +{cantidad:.2f} L. Total: {nuevo_total:.2f} L', 'success')
-    except Exception as e:
-        print("[Error agregar_inventario]:", e)
-        flash('Error al agregar inventario', 'danger')
+    cur.close()
+    conn.close()
 
-    return redirect(url_for('gestionar_inventario'))
-
+    return render_template(
+        'gestionar_inventario.html',
+        historial=historial,
+        total=total,
+        agregado_hoy=agregado_hoy,
+        eliminado_hoy=eliminado_hoy,
+        consumo_promedio=round(consumo_promedio,2),
+        umbral_critico=umbral_critico,
+        umbral_stock=umbral_stock,
+        history_labels=history_labels,
+        history_values=history_values
+    )
 
 #-------- ELIMINAR INVENTARIO -----------------------------
 @app.route('/admin/eliminar_inventario', methods=['POST'])
