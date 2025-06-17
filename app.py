@@ -1255,27 +1255,75 @@ def gestionar_inventario():
     conn = get_db_connection()
     cur = conn.cursor(dictionary=True)
 
-    # Obtener historial completo
+    # 1) Historial completo
     cur.execute("SELECT * FROM inventario ORDER BY fecha DESC")
     historial = cur.fetchall()
 
-    # Calcular total actualizado: entradas - salidas
+    # 2) Total disponible
     cur.execute("""
-        SELECT 
+        SELECT
             IFNULL(SUM(entrada_inventario), 0) AS total_entradas,
-            IFNULL(SUM(salida_inventario), 0) AS total_salidas
+            IFNULL(SUM(salida_inventario), 0)  AS total_salidas
         FROM inventario
     """)
-    resultado = cur.fetchone()
-    
-    entradas = float(resultado['total_entradas']) if resultado['total_entradas'] is not None else 0.0
-    salidas = float(resultado['total_salidas']) if resultado['total_salidas'] is not None else 0.0
-    total = entradas - salidas
+    res = cur.fetchone()
+    entradas = float(res['total_entradas'])
+    salidas  = float(res['total_salidas'])
+    total    = entradas - salidas
+
+    # 3) Agregado y eliminado hoy
+    hoy = datetime.now().date()
+    cur.execute("SELECT IFNULL(SUM(entrada_inventario),0) AS agregado FROM inventario WHERE DATE(fecha)=%s", (hoy,))
+    agregado_hoy = float(cur.fetchone()['agregado'])
+    cur.execute("SELECT IFNULL(SUM(salida_inventario),0) AS eliminado FROM inventario WHERE DATE(fecha)=%s", (hoy,))
+    eliminado_hoy = float(cur.fetchone()['eliminado'])
+
+    # 4) Consumo promedio diario (desde el primer registro)
+    if historial:
+        primera_fecha = historial[-1]['fecha'].date()
+    else:
+        primera_fecha = hoy
+    dias = (hoy - primera_fecha).days + 1
+    consumo_promedio = salidas / dias if dias > 0 else 0
+
+    # 5) Umbrales dinámicos
+    umbral_critico = consumo_promedio
+    umbral_stock   = consumo_promedio * 3  # p.ej. buffer de 3 días
+
+    # 6) Datos para el gráfico de evolución mensual
+    cur.execute("""
+        SELECT
+            DATE_FORMAT(fecha,'%%Y-%%m') AS mes,
+            SUM(entrada_inventario) AS ent,
+            SUM(salida_inventario)  AS sal
+        FROM inventario
+        GROUP BY mes
+        ORDER BY mes
+    """)
+    rows_mes = cur.fetchall()
+    running = 0
+    history_labels = []
+    history_values = []
+    for row in rows_mes:
+        running += (row['ent'] or 0) - (row['sal'] or 0)
+        history_labels.append(row['mes'])
+        history_values.append(running)
 
     cur.close()
     conn.close()
 
-    return render_template('gestionar_inventario.html', historial=historial, total=total)
+    return render_template(
+        'gestionar_inventario.html',
+        historial=historial,
+        total=total,
+        agregado_hoy=agregado_hoy,
+        eliminado_hoy=eliminado_hoy,
+        consumo_promedio=consumo_promedio,
+        umbral_critico=umbral_critico,
+        umbral_stock=umbral_stock,
+        history_labels=history_labels,
+        history_values=history_values
+    )
 
 @app.route('/admin/agregar_inventario', methods=['POST'])
 def agregar_inventario():
