@@ -53,18 +53,18 @@
 
           <hr>
           <h2>Eliminar Vehículo</h2>
-          <form action="{{ url_for('eliminar_vehiculo') }}" method="POST">
-            <label for="vehiculo_id">Selecciona un vehículo:</label>
-            <select name="vehiculo_id" id="vehiculo_id" class="form-select" required>
-              <option value="" disabled selected>-- Elige uno --</option>
-              {% for v in vehiculos %}
-                <option value="{{ v.id }}">
-                  {{ v.tipo | capitalize }} – {{ v.placa }} ({{ v.capacidad_litros }} L)
-                </option>
-              {% endfor %}
-            </select>
-            <button type="submit" class="btn btn-danger mt-3">Eliminar</button>
-          </form>
+<form action="{{ url_for('eliminar_vehiculo') }}" method="POST">
+  <label for="vehiculo_id">Selecciona un vehículo:</label>
+  <select name="vehiculo_id" id="vehiculo_id" class="form-select" required>
+    <option value="" disabled selected>-- Elige uno --</option>
+    {% for v in vehiculos %}
+      <option value="{{ v.id }}">
+        {{ v.tipo | capitalize }} – {{ v.placa }} ({{ v.capacidad_litros }} L)
+      </option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-danger mt-3">Eliminar</button>
+</form>
 
         </div>
       </div>

@@ -604,6 +604,36 @@ def agregar_vehiculo_route():
 
     return render_template("gestion_envios/agregar_vehiculo.html")
 
+@app.route("/vehiculos/eliminar", methods=["POST"])
+def eliminar_vehiculo():
+    # Sólo admin
+    if session.get('rol') != 'admin':
+        flash("Acceso denegado", "danger")
+        return redirect(url_for("listar_envios_route"))
+
+    # 1) Obtenemos el id del form
+    vehiculo_id = request.form.get("vehiculo_id")
+    if not vehiculo_id:
+        flash("Debes seleccionar un vehículo.", "warning")
+        return redirect(url_for("agregar_vehiculo_route"))
+
+    # 2) Eliminamos
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM vehiculos WHERE id = %s", (vehiculo_id,))
+        conn.commit()
+        flash("Vehículo eliminado correctamente.", "success")
+    except Exception as e:
+        print(f"[Error eliminar_vehiculo]: {e}")
+        flash("No se pudo eliminar el vehículo.", "danger")
+    finally:
+        cur.close()
+        conn.close()
+
+    return redirect(url_for("agregar_vehiculo_route"))
+
+
 # ------------------------------
 # RUTA: Agregar Conductor (GET/POST)
 # ------------------------------
