@@ -1380,7 +1380,7 @@ def agregar_inventario():
 
 
     
-@@app.route('/admin/eliminar_inventario', methods=['POST'])
+@app.route('/admin/eliminar_inventario', methods=['POST'])
 def eliminar_inventario():
     if session.get('rol') != 'admin':
         return jsonify(success=False, message="Acceso denegado"), 403
