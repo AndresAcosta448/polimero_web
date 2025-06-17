@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Mis Cotizaciones Pendientes</title>
+  <!-- Aquí carga el CSS que definimos antes -->
+  <link 
+    rel="stylesheet" 
+    href="{{ url_for('static', filename='ver_cotizacion_cliente.css') }}"
+  >
+</head>
+<body>
+  <div class="pending-container">
+    <h1>Mis Cotizaciones Pendientes</h1>
+    <a class="back-link" href="{{ url_for('calculadora') }}">
+      ← Volver
+    </a>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Longitud (m)</th>
+          <th>Ancho (m)</th>
+          <th>Profundidad (m)</th>
+          <th>Total ($)</th>
+        </tr>
+      </thead>
+<tbody>
+  {% for c in cotizaciones %}
+  <tr>
+    <td>{{ c.id }}</td>
+    <td>{{ c.longitud }}</td>
+    <td>{{ c.ancho }}</td>
+    <td>{{ c.profundidad }}</td>
+    <td>${{ c.total }}</td>
+    <td>
+      <form action="{{ url_for('eliminar_cotizacion', id=c.id) }}"
+            method="post"
+            style="display:inline;">
+       <button 
+  type="submit" 
+  class="btn-delete"
+  onclick="return confirm('¿Eliminar tu cotización #{{ c.id }}?');"
+>
+  Eliminar
+</button>
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <!-- ... -->
+  {% endfor %}
+</tbody>
+
+    </table>
+  </div>
+</body>
+</html>

@@ -1,0 +1,173 @@
+body {
+  background-color: #f4f4f4;
+  font-family: Arial, sans-serif;
+  color: #333;
+}
+
+.navbar {
+  border-bottom: 2px solid #ccc;
+}
+
+.container {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2, h3 {
+  color: #151616;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+input[type="number"],
+input[type="date"] {
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+button[type="submit"] {
+  background: #28a745;
+  border: none;
+  color: #fff;
+  padding: 10px 15px;
+  border-radius: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  width: 100%;
+}
+
+button[type="submit"]:hover {
+  background: #218838;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+table thead {
+  background: #28a745;
+  color: #fff;
+}
+
+table th,
+table td {
+  padding: 12px;
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+table tbody tr:nth-child(even) {
+  background: #f9f9f9;
+}
+
+.btn-secondary {
+   background: linear-gradient(135deg, #28a745, #34d058); /* gradiente verde */
+  color: #fff !important; /* letras blancas */
+  border: none;
+  border-radius: 25px; /* forma ovalada */
+  padding: 0.5rem 1.2rem;
+  font-size: 1rem;
+  text-decoration: none;
+  display: inline-block;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.btn-secondary:hover {
+   background: linear-gradient(135deg, #218838, #28a745); /* tono más oscuro en hover */
+  transform: translateY(-2px);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #28a745, #34d058); /* gradiente verde */
+  color: #fff !important; /* letras blancas */
+  border: none;
+  border-radius: 25px; /* forma ovalada */
+  padding: 0.5rem 1.2rem;
+  font-size: 1rem;
+  text-decoration: none;
+  display: inline-block;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.btn-success:hover {
+   background: linear-gradient(135deg, #218838, #28a745); /* tono más oscuro en hover */
+  transform: translateY(-2px);
+}
+
+.alert {
+  margin: 20px 0;
+  padding: 10px 15px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.alert-success {
+  background: #d4edda;
+  color: #155724;
+}
+
+.alert-error {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.alert-info {
+  background: #cce5ff;
+  color: #004085;
+}
+
+/* Botón de Volver con estilo ovalado y verde */
+.btn-dark {
+  background: linear-gradient(135deg, #28a745, #34d058); /* gradiente verde */
+  color: #fff !important; /* letras blancas */
+  border: none;
+  border-radius: 25px; /* forma ovalada */
+  padding: 0.5rem 1.2rem;
+  font-size: 1rem;
+  text-decoration: none;
+  display: inline-block;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.btn-dark:hover {
+  background: linear-gradient(135deg, #218838, #28a745); /* tono más oscuro en hover */
+  transform: translateY(-2px);
+}
+
+/* Resalta el resumen de inventario */
+.inventory-summary {
+  margin-bottom: 1.5rem;
+}
+.inventory-summary .card {
+  border-radius: 1rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+}
+.inventory-summary .card-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.inventory-summary .card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.inventory-summary .inventory-value {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+

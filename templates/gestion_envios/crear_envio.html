@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Crear Nuevo Envío</title>
+
+  <!-- Bootstrap (grid y estilos base) -->
+  <link 
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
+    rel="stylesheet"
+  >
+
+  <!-- Base de estilos proporcionada -->
+  <style>
+    :root {
+      --verde: #000000;
+      --verde-hover: #000000;
+      --blanco: #fff;
+      --gris-texto: #555;
+      --sombra: rgba(0, 0, 0, 0.15);
+      --verde-gradiente: linear-gradient(135deg, #28a745, #34d058);
+    }
+
+    /* Fondo general */
+    body {
+      background-color: #f4f4f4;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Contenedor centrado para el formulario */
+    .container-form {
+      max-width: 500px;
+      margin: 50px auto;
+      padding: 0 15px;
+    }
+
+    /* Card para el formulario */
+    .form-card {
+      background: var(--blanco);
+      border-radius: 12px;
+      box-shadow: 0 10px 20px var(--sombra);
+      overflow: hidden;
+      position: relative;
+      padding: 2rem;
+    }
+
+    /* Título */
+    .form-card h1 {
+      color: var(--verde);
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    /* Link de “Volver” */
+    .link-volver {
+      display: inline-block;
+      margin-bottom: 1rem;
+      color: var(--verde);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .link-volver:hover {
+      color: var(--verde-hover);
+    }
+
+    /* Mensajes flash */
+    .flash-list {
+      list-style: none;
+      padding: 0;
+      margin-bottom: 1rem;
+    }
+    .flash-list li {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    /* Labels e inputs */
+    .form-card label {
+      font-size: 1rem;
+      color: var(--gris-texto);
+      margin-top: 1rem;
+      display: block;
+    }
+    .form-card input[type="text"],
+    .form-card input[type="number"] {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.3rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+      box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+      transition: border-color 0.3s ease;
+    }
+    .form-card input[type="text"]:focus,
+    .form-card input[type="number"]:focus {
+      border-color: var(--verde);
+      outline: none;
+    }
+
+    /* Botón registrar */
+    .btn-gestionar-admins {
+      display: inline-block;
+      padding: 10px 20px;
+      margin-top: 1.5rem;
+      background: var(--verde-gradiente);
+      color: var(--blanco);
+      text-decoration: none;
+      border: none;
+      border-radius: 25px;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+    .btn-gestionar-admins:hover {
+      background: linear-gradient(135deg, var(--verde-hover), #28a745);
+      transform: translateY(-2px);
+    }
+
+    /* Footer */
+    footer {
+      background: #222;
+      color: var(--blanco);
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 1rem 0;
+      margin-top: 50px;
+      box-shadow: 0 -4px 10px var(--sombra);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container-form">
+    <div class="form-card">
+      <h1>Crear Envío</h1>
+      <a href="{{ url_for('listar_envios_route') }}" class="link-volver">&larr; Volver a lista de envíos</a>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <ul class="flash-list">
+            {% for category, msg in messages %}
+              {% if category == "danger" %}
+                {% set bg = "#f8d7da" %}
+                {% set color = "#842029" %}
+              {% elif category == "warning" %}
+                {% set bg = "#fff3cd" %}
+                {% set color = "#664d03" %}
+              {% else %}
+                {% set bg = "#d1e7dd" %}
+                {% set color = "#0f5132" %}
+              {% endif %}
+                {{ msg }}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      {% endwith %}
+
+      <form action="{{ url_for('crear_envio_route') }}" method="POST">
+        <label for="origen">Origen:</label>
+        <input type="text" name="origen" id="origen" required>
+
+        <label for="destino">Destino:</label>
+        <input type="text" name="destino" id="destino" required>
+
+        <label for="cantidad_litros">Cantidad de polímero (litros):</label>
+        <input type="number" name="cantidad_litros" id="cantidad_litros" min="1" required>
+
+        <button type="submit" class="btn-gestionar-admins">Registrar Envío</button>
+      </form>
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2025 Polímeros S.A. - Panel del Administrador
+  </footer>
+</body>
+</html>

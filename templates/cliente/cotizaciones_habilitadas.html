@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Cotizaciones para Pago</title>
+  <link href="../../static/cotizacion_habilitada.css" rel="stylesheet">
+  
+</head>
+<body>
+  <div class="container">
+    <h1>Cotizaciones Habilitadas para Pago</h1>
+    <a href="{{ url_for('calculadora') }}" class="btn-volver">&larr; Volver</a>
+
+    {% if cotizaciones %}
+      <div class="tabla-contenedor">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Longitud</th>
+              <th>Ancho</th>
+              <th>Profundidad</th>
+              <th>Polímero (L)</th>
+              <th>Agua (L)</th>
+              <th>Total (Monto)</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in cotizaciones %}
+              <tr>
+                <td>{{ c.id }}</td>
+                <td>{{ c.longitud }}</td>
+                <td>{{ c.ancho }}</td>
+                <td>{{ c.profundidad }}</td>
+                <td>{{ c.aggrebind }}</td>
+                <td>{{ c.agua }}</td>
+                <td>${{ "%.2f"|format(c.total) }}</td>
+                <td>
+                  {% if c.pagada %}
+                    <span class="text-success">Pagada</span>
+                  {% else %}
+                    <span class="text-warning">Pendiente</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if not c.pagada %}
+                    <a href="{{ url_for('pagar_cotizacion', cotizacion_id=c.id) }}" class="btn-pagar">
+                      Pagar
+                    </a>
+                  {% else %}
+                    <span class="text-muted">Pagada</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>No hay cotizaciones registradas.</p>
+    {% endif %}
+  </div>
+</body>
+</html>

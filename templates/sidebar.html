@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Sidebar</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}">
+</head>
+<body>
+  <div class="sidebar">
+  <h2>Admin Panel</h2>
+  <ul>
+    <li><a href="{{ url_for('admin_panel') }}">Panel Admin</a></li>
+    <li><a href="{{ url_for('gestionar_admins') }}">Administradores registrados</a></li>
+    <li><a href="{{ url_for('ver_cotizaciones') }}">Cotizaciones</a></li>
+    <li><a href="{{ url_for('gestionar_inventario') }}">Gestión de Inventario</a></li>
+    <li><a href="{{ url_for('agregar_vehiculo_route') }}">Agregar Vehículo</a></li>
+    <li><a href="{{ url_for('agregar_conductor_route') }}">Agregar Conductor</a></li>
+    <li><a href="{{ url_for('ordenes_pendientes') }}">Órdenes de envío pendientes</a></li>
+    <li><a href="{{ url_for('envios_asignados') }}">Envíos Asignados</a></li>
+  </ul>
+</div>
+</body>
+</html>

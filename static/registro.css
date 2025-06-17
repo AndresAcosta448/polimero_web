@@ -10,7 +10,7 @@ html, body {
     background-size: cover;
 }
 
-/* Formulario de registro */
+/* Contenedor principal */
 .register-container {
     max-width: 400px;
     margin: 100px auto;
@@ -21,6 +21,7 @@ html, body {
     box-shadow: 0px 0px 20px 0px rgba(0, 0, 0, 0.1);
 }
 
+/* Título */
 .register-container h2 {
     text-align: center;
     color: #000000;
@@ -32,6 +33,7 @@ html, body {
     text-align: center;
 }
 
+/* Grupos de entrada */
 .input-group {
     margin-bottom: 20px;
     text-align: left;
@@ -44,15 +46,27 @@ html, body {
     font-size: 2rem;
 }
 
+/* Campos de entrada uniformes */
 .input-group input[type="text"],
-.input-group input[type="password"] {
-    width: 95%;
+.input-group input[type="password"],
+.input-group input[type="email"] {
+    width: 100%;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 10px;
     font-size: 1.8rem;
+    box-sizing: border-box;
 }
 
+/* Texto debajo de la contraseña */
+.input-group .info-text {
+    display: block;
+    margin-top: 5px;
+    font-size: 1.4rem;
+    color: #666;
+}
+
+/* Botón de enviar */
 button[type="submit"] {
     width: 100%;
     padding: 10px;
@@ -69,7 +83,7 @@ button[type="submit"]:hover {
     background-color: #049410;
 }
 
-/* Enlaces extra */
+/* Enlaces inferiores */
 .register-links {
     text-align: center;
     margin-top: 20px;
@@ -81,20 +95,21 @@ button[type="submit"]:hover {
     text-decoration: none;
     margin: 5px;
     display: inline-block;
-    font-size: 2rem; /* Aumentamos el tamaño de la letra */
+    font-size: 2rem;
 }
 
 .register-links a:hover {
     text-decoration: underline;
 }
 
-/* Responsive */
+/* Responsivo */
 @media screen and (max-width: 768px) {
     .register-container {
         max-width: 90%;
     }
 }
-/* Estilo general para las alertas */
+
+/* Estilos de alertas flash */
 ul {
     padding: 0;
     list-style: none;
@@ -102,44 +117,26 @@ ul {
 }
 
 ul li {
-    font-size: 18px; /* Tamaño de fuente grande */
+    font-size: 1.8rem;
     padding: 15px;
     border-radius: 8px;
     margin-bottom: 10px;
     font-weight: bold;
     text-align: center;
-}
-
-/* Alerta de error */
-ul li.error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* Alerta de éxito (puedes usarla para otros mensajes) */
-ul li.mensaje {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* Estilo para cuando la alerta es destacada */
-ul li {
-    font-size: 22px; /* Aumentar el tamaño de la fuente para hacerla más llamativa */
     background: linear-gradient(to right, #ff416c, #ff4b2b);
     color: white;
-    padding: 20px;
-    border-radius: 10px;
-    margin: 15px 0;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-    font-weight: bold;
-    text-align: center;
     transition: transform 0.3s ease-in-out;
 }
 
 ul li:hover {
-    transform: scale(1.05); /* Efecto de escala cuando el cursor pasa sobre la alerta */
+    transform: scale(1.05);
 }
+
+.input-group input::placeholder {
+    color: #999;
+    font-style: italic;
+    font-size: 1.7rem;
+    opacity: 1; /* Para que se vea claramente */
+}
+

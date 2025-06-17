@@ -1,0 +1,217 @@
+/* static/estilos_cliente.css */
+
+/* ------------------------------------------
+   Variables de color y tipografía globales
+   ------------------------------------------ */
+:root {
+  --verde-principal: #28a745;
+  --verde-hover: #218838;
+  --gris-fondo: #f7f7f7;
+  --gris-texto: #555555;
+  --blanco: #ffffff;
+  --rojo: #dc3545;
+  --amarillo: #ffc107;
+  --sombra: rgba(0, 0, 0, 0.1);
+  --radio-bordes: 8px;
+  --fuente-principal: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* -------------------------
+   Reset y estilo global
+   ------------------------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--fuente-principal);
+  background-color: var(--gris-fondo);
+  color: var(--gris-texto);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--verde-principal);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* -------------------------
+   Contenedor general
+   ------------------------- */
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1rem;
+}
+
+h1 {
+  font-size: 2rem;
+  color: var(--verde-principal);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+/* -------------------------
+   Enlaces de regreso
+   ------------------------- */
+p > a {
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  display: inline-block;
+}
+
+/* -------------------------
+   Mensajes flash
+   ------------------------- */
+ul {
+  list-style: none;
+  margin-bottom: 1rem;
+}
+
+ul li {
+  padding: 0.6rem 1rem;
+  border-radius: var(--radio-bordes);
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+ul li { background: var(--blanco); border: 1px solid var(--sombra); }
+
+ul li:nth-child(odd) {
+  background: #fdfdfd;
+}
+
+/* -------------------------
+   Formulario
+   ------------------------- */
+form {
+  background: var(--blanco);
+  padding: 2rem;
+  width: 100%;
+  max-width: 500px;
+  border-radius: var(--radio-bordes);
+  box-shadow: 0 4px 10px var(--sombra);
+  margin-bottom: 2rem;
+}
+
+fieldset {
+  border: 1px solid #ddd;
+  border-radius: var(--radio-bordes);
+  padding: 1.2rem 1rem;
+  margin-bottom: 1.5rem;
+  background-color: #fafafa;
+}
+
+legend {
+  font-weight: bold;
+  font-size: 1rem;
+  color: var(--verde-principal);
+  padding: 0 0.5rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.95rem;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+select,
+textarea {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: var(--radio-bordes);
+  background-color: var(--blanco);
+  transition: border-color 0.2s ease;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--verde-principal);
+}
+
+.campo-tarjeta {
+  margin-bottom: 1rem;
+}
+
+/* -------------------------
+   Botones
+   ------------------------- */
+button {
+  width: 100%;
+  background-color: var(--verde-principal);
+  color: var(--blanco);
+  border: none;
+  padding: 0.75rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: var(--radio-bordes);
+  box-shadow: 0 4px 8px var(--sombra);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: var(--verde-hover);
+  transform: translateY(-2px);
+}
+
+button:disabled {
+  background-color: #94d3a2;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* -------------------------
+   Controles de radio
+   ------------------------- */
+fieldset > label {
+  display: flex;
+  align-items: center;
+  font-size: 0.95rem;
+  margin-bottom: 0.6rem;
+  cursor: pointer;
+}
+
+fieldset > label input[type="radio"] {
+  margin-right: 0.6rem;
+  accent-color: var(--verde-principal);
+}
+
+/* -------------------------
+   Estilos para mostrar/ocultar
+   ------------------------- */
+.oculto {
+  display: none;
+}
+
+/* -------------------------
+   Responsividad
+   ------------------------- */
+@media (max-width: 576px) {
+  form {
+    padding: 1.2rem;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+  }
+}
