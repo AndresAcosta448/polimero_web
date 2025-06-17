@@ -1246,6 +1246,8 @@ def dashboard():
         return redirect(url_for('login'))
     return render_template('calculadora.html', nombre=session['nombre'])
 
+from datetime import datetime, date
+
 #-------- 5. GESTIÓN DE INVENTARIO (SOLO ADMIN) -----------------------------
 @app.route('/admin/inventario')
 def gestionar_inventario():
@@ -1263,7 +1265,7 @@ def gestionar_inventario():
     cur.execute("""
         SELECT
             IFNULL(SUM(entrada_inventario), 0) AS total_entradas,
-            IFNULL(SUM(salida_inventario), 0)  AS total_salidas
+            IFNULL(SUM(salida_inventario),  0) AS total_salidas
         FROM inventario
     """)
     res = cur.fetchone()
@@ -1273,9 +1275,15 @@ def gestionar_inventario():
 
     # 3) Agregado y eliminado hoy
     hoy = datetime.now().date()
-    cur.execute("SELECT IFNULL(SUM(entrada_inventario),0) AS agregado FROM inventario WHERE DATE(fecha)=%s", (hoy,))
+    cur.execute(
+        "SELECT IFNULL(SUM(entrada_inventario),0) AS agregado FROM inventario WHERE DATE(fecha) = %s",
+        (hoy,)
+    )
     agregado_hoy = float(cur.fetchone()['agregado'])
-    cur.execute("SELECT IFNULL(SUM(salida_inventario),0) AS eliminado FROM inventario WHERE DATE(fecha)=%s", (hoy,))
+    cur.execute(
+        "SELECT IFNULL(SUM(salida_inventario),0) AS eliminado FROM inventario WHERE DATE(fecha) = %s",
+        (hoy,)
+    )
     eliminado_hoy = float(cur.fetchone()['eliminado'])
 
     # 4) Consumo promedio diario (desde el primer registro)
@@ -1288,23 +1296,39 @@ def gestionar_inventario():
 
     # 5) Umbrales dinámicos
     umbral_critico = consumo_promedio
-    umbral_stock   = consumo_promedio * 3  # p.ej. buffer de 3 días
+    umbral_stock   = consumo_promedio * 3  # buffer de 3 días
 
-       # 6) Evolución mensual: total_inventario al cierre de cada mes
+    # 6) Evolución mensual: total_inventario al cierre de cada mes
     cur.execute("""
         SELECT
-          DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
-          MAX(total_inventario)            AS total
+            DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
+            MAX(total_inventario)            AS total
         FROM inventario
         GROUP BY mes
         ORDER BY mes
     """)
     rows_mes = cur.fetchall()
-
     history_labels = [row['mes'] for row in rows_mes]
     history_values = [float(row['total']) for row in rows_mes]
-from datetime import datetime
 
+    cur.close()
+    conn.close()
+
+    return render_template(
+        'gestionar_inventario.html',
+        historial=historial,
+        total=total,
+        agregado_hoy=agregado_hoy,
+        eliminado_hoy=eliminado_hoy,
+        consumo_promedio=consumo_promedio,
+        umbral_critico=umbral_critico,
+        umbral_stock=umbral_stock,
+        history_labels=history_labels,
+        history_values=history_values
+    )
+
+
+#-------- RUTAS PARA AGREGAR Y ELIMINAR INVENTARIO -----------------------------
 @app.route('/admin/agregar_inventario', methods=['POST'])
 def agregar_inventario():
     if session.get('rol') != 'admin':
@@ -1319,20 +1343,18 @@ def agregar_inventario():
         conn = get_db_connection()
         cur = conn.cursor(dictionary=True)
 
-        # 1) calcular stock actual
+        # stock actual
         cur.execute("""
             SELECT
               COALESCE(SUM(entrada_inventario),0) AS entradas,
-              COALESCE(SUM(salida_inventario),0)  AS salidas
+              COALESCE(SUM(salida_inventario), 0) AS salidas
             FROM inventario
         """)
         fila = cur.fetchone()
         actual = float(fila['entradas']) - float(fila['salidas'])
 
-        # 2) nuevo total
+        # nuevo total y registro con hora
         nuevo_total = actual + cantidad
-
-        # 3) insert con fecha+hora
         ahora = datetime.now()
         cur.execute("""
             INSERT INTO inventario
@@ -1356,7 +1378,6 @@ def agregar_inventario():
         return redirect(url_for('gestionar_inventario'))
 
 
-    
 @app.route('/admin/eliminar_inventario', methods=['POST'])
 def eliminar_inventario():
     if session.get('rol') != 'admin':
@@ -1371,11 +1392,11 @@ def eliminar_inventario():
         conn = get_db_connection()
         cur = conn.cursor(dictionary=True)
 
-        # 1) stock actual
+        # stock actual
         cur.execute("""
             SELECT
               COALESCE(SUM(entrada_inventario),0) AS entradas,
-              COALESCE(SUM(salida_inventario),0)  AS salidas
+              COALESCE(SUM(salida_inventario), 0) AS salidas
             FROM inventario
         """)
         fila = cur.fetchone()
@@ -1387,10 +1408,8 @@ def eliminar_inventario():
             conn.close()
             return redirect(url_for('gestionar_inventario'))
 
-        # 2) nuevo total
+        # nuevo total y registro con hora
         nuevo_total = actual - cantidad
-
-        # 3) insert con fecha+hora
         ahora = datetime.now()
         cur.execute("""
             INSERT INTO inventario
@@ -1412,17 +1431,6 @@ def eliminar_inventario():
         print("[Error eliminar_inventario]:", e)
         flash('Error al eliminar inventario', 'danger')
         return redirect(url_for('gestionar_inventario'))
-
-@app.route('/api/inventario/actual')
-def api_inventario_actual():
-    """
-    API endpoint para obtener el inventario actual
-    """
-    inventario = obtener_inventario_disponible()
-    return jsonify({
-        'inventario_disponible': inventario,
-        'timestamp': datetime.now().isoformat()
-    })
 
 #-------- 6. Eliminar cotización (admin o cliente) --------------------------
 @app.route('/eliminar_cotizacion/<int:id>', methods=['POST'])
