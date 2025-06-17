@@ -5,6 +5,7 @@ from flask_mail import Mail, Message
 import random
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date
+
 import math
 from flask import send_file
 import io
@@ -1328,17 +1329,20 @@ def gestionar_inventario():
     )
 @app.route('/admin/agregar_inventario', methods=['POST'])
 def agregar_inventario():
+    """
+    Agregar entrada de inventario (solo admin)
+    """
     if session.get('rol') != 'admin':
         return jsonify(success=False, message="Acceso denegado"), 403
-
+    
     try:
         cantidad = float(request.form['cantidad'])
-        fecha = date.today()  # usamos la fecha del servidor automáticamente
-
+        fecha = request.form['fecha']
+        
         if cantidad <= 0:
             flash('La cantidad debe ser mayor a 0', 'danger')
             return redirect(url_for('gestionar_inventario'))
-
+        
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
@@ -1348,18 +1352,16 @@ def agregar_inventario():
         conn.commit()
         cur.close()
         conn.close()
-
+        
         flash(f'Inventario actualizado: +{cantidad}L agregados', 'success')
         return redirect(url_for('gestionar_inventario'))
-
+        
     except ValueError:
         flash('Cantidad inválida', 'danger')
         return redirect(url_for('gestionar_inventario'))
     except Exception as e:
-        print("[Error agregar_inventario]:", e)
         flash('Error al agregar inventario', 'danger')
         return redirect(url_for('gestionar_inventario'))
-
     
 @app.route('/admin/eliminar_inventario', methods=['POST'])
 def eliminar_inventario():
@@ -1368,7 +1370,7 @@ def eliminar_inventario():
 
     try:
         cantidad = float(request.form['cantidad'])
-        fecha = date.today()  # fecha de hoy
+        fecha = request.form['fecha']
 
         if cantidad <= 0:
             flash('La cantidad debe ser mayor a 0', 'danger')
@@ -1379,13 +1381,12 @@ def eliminar_inventario():
 
         # Obtener inventario actual: entradas - salidas
         cur.execute("""
-            SELECT
-              COALESCE(SUM(entrada_inventario), 0) AS entradas,
-              COALESCE(SUM(salida_inventario),  0) AS salidas
+            SELECT COALESCE(SUM(entrada_inventario), 0) AS entradas,
+                   COALESCE(SUM(salida_inventario), 0) AS salidas
             FROM inventario
         """)
-        res = cur.fetchone()
-        actual = float(res['entradas']) - float(res['salidas'])
+        resultado = cur.fetchone()
+        actual = float(resultado['entradas']) - float(resultado['salidas'])
 
         if cantidad > actual:
             flash('No hay suficiente inventario para eliminar esa cantidad', 'danger')
@@ -1393,6 +1394,7 @@ def eliminar_inventario():
             conn.close()
             return redirect(url_for('gestionar_inventario'))
 
+        # Insertar la salida
         nuevo_total = actual - cantidad
         cur.execute("""
             INSERT INTO inventario (total_inventario, salida_inventario, fecha, fecha_creacion, fecha_actualizacion)
@@ -1406,14 +1408,10 @@ def eliminar_inventario():
         flash(f'Se eliminaron {cantidad}L del inventario', 'success')
         return redirect(url_for('gestionar_inventario'))
 
-    except ValueError:
-        flash('Cantidad inválida', 'danger')
-        return redirect(url_for('gestionar_inventario'))
     except Exception as e:
-        print("[Error eliminar_inventario]:", e)
+        print("Error:", e)  # Para depurar en consola
         flash('Error al eliminar inventario', 'danger')
         return redirect(url_for('gestionar_inventario'))
-
 
 @app.route('/api/inventario/actual')
 def api_inventario_actual():
