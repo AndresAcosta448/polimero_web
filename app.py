@@ -1290,7 +1290,7 @@ def gestionar_inventario():
     umbral_critico = consumo_promedio
     umbral_stock   = consumo_promedio * 3  # p.ej. buffer de 3 días
 
-    # 6) Datos para el gráfico de evolución mensual
+   # 6) Datos para el gráfico de evolución mensual (cast a float)
     cur.execute("""
         SELECT
             DATE_FORMAT(fecha,'%%Y-%%m') AS mes,
@@ -1301,11 +1301,13 @@ def gestionar_inventario():
         ORDER BY mes
     """)
     rows_mes = cur.fetchall()
-    running = 0
+    running = 0.0
     history_labels = []
     history_values = []
     for row in rows_mes:
-        running += (row['ent'] or 0) - (row['sal'] or 0)
+        ent = float(row['ent'] or 0)
+        sal = float(row['sal'] or 0)
+        running += ent - sal
         history_labels.append(row['mes'])
         history_values.append(running)
 
@@ -1324,7 +1326,6 @@ def gestionar_inventario():
         history_labels=history_labels,
         history_values=history_values
     )
-
 @app.route('/admin/agregar_inventario', methods=['POST'])
 def agregar_inventario():
     """
