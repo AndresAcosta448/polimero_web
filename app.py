@@ -1326,6 +1326,8 @@ def gestionar_inventario():
         history_labels=history_labels,
         history_values=history_values
     )
+from datetime import datetime
+
 @app.route('/admin/agregar_inventario', methods=['POST'])
 def agregar_inventario():
     if session.get('rol') != 'admin':
@@ -1333,23 +1335,39 @@ def agregar_inventario():
 
     try:
         cantidad = float(request.form['cantidad'])
-        fecha = date.today()  # usamos la fecha del servidor automáticamente
-
         if cantidad <= 0:
             flash('La cantidad debe ser mayor a 0', 'danger')
             return redirect(url_for('gestionar_inventario'))
 
         conn = get_db_connection()
-        cur = conn.cursor()
+        cur = conn.cursor(dictionary=True)
+
+        # 1) calcular stock actual
         cur.execute("""
-            INSERT INTO inventario (total_inventario, entrada_inventario, fecha, fecha_creacion, fecha_actualizacion)
+            SELECT
+              COALESCE(SUM(entrada_inventario),0) AS entradas,
+              COALESCE(SUM(salida_inventario),0)  AS salidas
+            FROM inventario
+        """)
+        fila = cur.fetchone()
+        actual = float(fila['entradas']) - float(fila['salidas'])
+
+        # 2) nuevo total
+        nuevo_total = actual + cantidad
+
+        # 3) insert con fecha+hora
+        ahora = datetime.now()
+        cur.execute("""
+            INSERT INTO inventario
+              (total_inventario, entrada_inventario, fecha, fecha_creacion, fecha_actualizacion)
             VALUES (%s, %s, %s, NOW(), NOW())
-        """, (cantidad, cantidad, fecha))
+        """, (nuevo_total, cantidad, ahora))
+
         conn.commit()
         cur.close()
         conn.close()
 
-        flash(f'Inventario actualizado: +{cantidad}L agregados', 'success')
+        flash(f'Inventario actualizado: +{cantidad:.2f} L. Total: {nuevo_total:.2f} L', 'success')
         return redirect(url_for('gestionar_inventario'))
 
     except ValueError:
@@ -1360,16 +1378,15 @@ def agregar_inventario():
         flash('Error al agregar inventario', 'danger')
         return redirect(url_for('gestionar_inventario'))
 
+
     
-@app.route('/admin/eliminar_inventario', methods=['POST'])
+@@app.route('/admin/eliminar_inventario', methods=['POST'])
 def eliminar_inventario():
     if session.get('rol') != 'admin':
         return jsonify(success=False, message="Acceso denegado"), 403
 
     try:
         cantidad = float(request.form['cantidad'])
-        fecha = date.today()  # fecha de hoy
-
         if cantidad <= 0:
             flash('La cantidad debe ser mayor a 0', 'danger')
             return redirect(url_for('gestionar_inventario'))
@@ -1377,15 +1394,15 @@ def eliminar_inventario():
         conn = get_db_connection()
         cur = conn.cursor(dictionary=True)
 
-        # Obtener inventario actual: entradas - salidas
+        # 1) stock actual
         cur.execute("""
             SELECT
-              COALESCE(SUM(entrada_inventario), 0) AS entradas,
-              COALESCE(SUM(salida_inventario),  0) AS salidas
+              COALESCE(SUM(entrada_inventario),0) AS entradas,
+              COALESCE(SUM(salida_inventario),0)  AS salidas
             FROM inventario
         """)
-        res = cur.fetchone()
-        actual = float(res['entradas']) - float(res['salidas'])
+        fila = cur.fetchone()
+        actual = float(fila['entradas']) - float(fila['salidas'])
 
         if cantidad > actual:
             flash('No hay suficiente inventario para eliminar esa cantidad', 'danger')
@@ -1393,17 +1410,22 @@ def eliminar_inventario():
             conn.close()
             return redirect(url_for('gestionar_inventario'))
 
+        # 2) nuevo total
         nuevo_total = actual - cantidad
+
+        # 3) insert con fecha+hora
+        ahora = datetime.now()
         cur.execute("""
-            INSERT INTO inventario (total_inventario, salida_inventario, fecha, fecha_creacion, fecha_actualizacion)
+            INSERT INTO inventario
+              (total_inventario, salida_inventario, fecha, fecha_creacion, fecha_actualizacion)
             VALUES (%s, %s, %s, NOW(), NOW())
-        """, (nuevo_total, cantidad, fecha))
+        """, (nuevo_total, cantidad, ahora))
 
         conn.commit()
         cur.close()
         conn.close()
 
-        flash(f'Se eliminaron {cantidad}L del inventario', 'success')
+        flash(f'Se eliminaron {cantidad:.2f} L. Total restante: {nuevo_total:.2f} L', 'success')
         return redirect(url_for('gestionar_inventario'))
 
     except ValueError:
@@ -1413,8 +1435,6 @@ def eliminar_inventario():
         print("[Error eliminar_inventario]:", e)
         flash('Error al eliminar inventario', 'danger')
         return redirect(url_for('gestionar_inventario'))
-
-
 
 @app.route('/api/inventario/actual')
 def api_inventario_actual():
