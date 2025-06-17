@@ -1244,7 +1244,14 @@ def gestionar_inventario():
     cur.close()
     conn.close()
 
-    return render_template('gestionar_inventario.html', historial=historial, total=total)
+    return render_template(
+    'gestionar_inventario.html',
+    historial=historial,
+    total=total,
+    umbral_stock=UMBRAL_STOCK,
+    umbral_critico=UMBRAL_CRITICO
+)
+
 
 @app.route('/admin/agregar_inventario', methods=['POST'])
 def agregar_inventario():
