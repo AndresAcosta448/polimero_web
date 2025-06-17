@@ -1267,6 +1267,7 @@ def dashboard():
 from datetime import datetime, date
 
 #-------- 5. GESTIÓN DE INVENTARIO (SOLO ADMIN) -----------------------------
+#-------- 5. GESTIÓN DE INVENTARIO (SOLO ADMIN) -----------------------------
 @app.route('/admin/inventario')
 def gestionar_inventario():
     if session.get('rol') != 'admin':
@@ -1275,62 +1276,49 @@ def gestionar_inventario():
     conn = get_db_connection()
     cur  = conn.cursor(dictionary=True)
 
-    # 1) Historial completo
-    cur.execute("SELECT * FROM inventario ORDER BY fecha DESC")
+    # Historial ordenado (más reciente primero)
+    cur.execute("""
+        SELECT *
+        FROM inventario
+        ORDER BY fecha DESC, fecha_creacion DESC
+    """)
     historial = cur.fetchall()
 
-    # 2) Total disponible
+    # Total acumulado
     cur.execute("""
-        SELECT
+        SELECT 
             IFNULL(SUM(entrada_inventario), 0) AS total_entradas,
-            IFNULL(SUM(salida_inventario),  0) AS total_salidas
+            IFNULL(SUM(salida_inventario), 0)  AS total_salidas
         FROM inventario
     """)
-    res      = cur.fetchone()
-    entradas = float(res['total_entradas'])
-    salidas  = float(res['total_salidas'])
+    resultado = cur.fetchone()
+    entradas = float(resultado['total_entradas'])
+    salidas  = float(resultado['total_salidas'])
     total    = entradas - salidas
 
-    # 3) Agregado y eliminado hoy
-    hoy = datetime.now().date()
-    cur.execute(
-        "SELECT IFNULL(SUM(entrada_inventario),0) AS agregado FROM inventario WHERE DATE(fecha) = %s",
-        (hoy,)
-    )
-    agregado_hoy  = float(cur.fetchone()['agregado'])
-    cur.execute(
-        "SELECT IFNULL(SUM(salida_inventario),0) AS eliminado FROM inventario WHERE DATE(fecha) = %s",
-        (hoy,)
-    )
-    eliminado_hoy = float(cur.fetchone()['eliminado'])
+    # Métricas diarias
+    cur.execute("SELECT IFNULL(SUM(entrada_inventario), 0) AS agregado_hoy FROM inventario WHERE DATE(fecha) = CURDATE()")
+    agregado_hoy = float(cur.fetchone()['agregado_hoy'])
+    cur.execute("SELECT IFNULL(SUM(salida_inventario), 0) AS eliminado_hoy FROM inventario WHERE DATE(fecha) = CURDATE()")
+    eliminado_hoy = float(cur.fetchone()['eliminado_hoy'])
 
-    # 4) Consumo promedio diario
-    if historial:
-        primera_fecha = historial[-1]['fecha'].date()
-    else:
-        primera_fecha = hoy
-    dias              = (hoy - primera_fecha).days + 1
-    consumo_promedio  = salidas / dias if dias > 0 else 0
-
-    # 5) Umbrales dinámicos
-    umbral_critico = consumo_promedio
-    umbral_stock   = consumo_promedio * 3
-
-    # 6) Evolución mensual: total_inventario al cierre de cada mes
+    # Consumo promedio diario (últimos 7 días)
     cur.execute("""
-        SELECT
-            DATE_FORMAT(fecha, '%%Y-%%m') AS mes,
-            MAX(total_inventario)            AS total
-        FROM inventario
-        GROUP BY mes
-        ORDER BY mes
+        SELECT AVG(daily.salidas) AS consumo_promedio FROM (
+            SELECT DATE(fecha) AS dia, SUM(salida_inventario) AS salidas
+            FROM inventario
+            WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            GROUP BY DATE(fecha)
+        ) AS daily
     """)
-    rows_mes       = cur.fetchall()
-    history_labels = [row['mes'] for row in rows_mes]
-    history_values = [float(row['total']) for row in rows_mes]
+    consumo_promedio = round(float(cur.fetchone()['consumo_promedio'] or 0), 2)
 
     cur.close()
     conn.close()
+
+    # Datos para la gráfica (últimos 30 registros invertidos para cronología ascendente)
+    labels = [item['fecha'].strftime('%d/%m') for item in historial[-30:]]
+    values = [item['total_inventario'] for item in historial[-30:]]
 
     return render_template(
         'gestionar_inventario.html',
@@ -1339,14 +1327,12 @@ def gestionar_inventario():
         agregado_hoy=agregado_hoy,
         eliminado_hoy=eliminado_hoy,
         consumo_promedio=consumo_promedio,
-        umbral_critico=umbral_critico,
-        umbral_stock=umbral_stock,
-        history_labels=history_labels,
-        history_values=history_values
+        history_labels=labels,
+        history_values=values
     )
 
 
-#-------- RUTAS PARA AGREGAR Y ELIMINAR INVENTARIO -----------------------------
+#-------- AGREGAR INVENTARIO -----------------------------
 @app.route('/admin/agregar_inventario', methods=['POST'])
 def agregar_inventario():
     if session.get('rol') != 'admin':
@@ -1359,7 +1345,7 @@ def agregar_inventario():
             return redirect(url_for('gestionar_inventario'))
 
         conn = get_db_connection()
-        cur = conn.cursor(dictionary=True)
+        cur  = conn.cursor(dictionary=True)
 
         # stock actual
         cur.execute("""
@@ -1368,12 +1354,12 @@ def agregar_inventario():
               COALESCE(SUM(salida_inventario), 0) AS salidas
             FROM inventario
         """)
-        fila = cur.fetchone()
+        fila   = cur.fetchone()
         actual = float(fila['entradas']) - float(fila['salidas'])
 
         # nuevo total y registro con hora
         nuevo_total = actual + cantidad
-        ahora = datetime.now()
+        ahora       = datetime.now()
         cur.execute("""
             INSERT INTO inventario
               (total_inventario, entrada_inventario, fecha, fecha_creacion, fecha_actualizacion)
@@ -1385,30 +1371,30 @@ def agregar_inventario():
         conn.close()
 
         flash(f'Inventario actualizado: +{cantidad:.2f} L. Total: {nuevo_total:.2f} L', 'success')
-        return redirect(url_for('gestionar_inventario'))
-
-    except ValueError:
-        flash('Cantidad inválida', 'danger')
-        return redirect(url_for('gestionar_inventario'))
     except Exception as e:
         print("[Error agregar_inventario]:", e)
         flash('Error al agregar inventario', 'danger')
-        return redirect(url_for('gestionar_inventario'))
+
+    return redirect(url_for('gestionar_inventario'))
 
 
+#-------- ELIMINAR INVENTARIO -----------------------------
 @app.route('/admin/eliminar_inventario', methods=['POST'])
 def eliminar_inventario():
     if session.get('rol') != 'admin':
-        return jsonify(success=False, message="Acceso denegado"), 403
+        flash('Acceso denegado', 'danger')
+        return redirect(url_for('login'))
 
     try:
-        cantidad = float(request.form['cantidad'])
-        if cantidad <= 0:
-            flash('La cantidad debe ser mayor a 0', 'danger')
+        cantidad  = float(request.form['cantidad'])
+        categoria = request.form.get('categoria','').strip()
+        razon     = request.form.get('razon','').strip()
+        if cantidad <= 0 or not categoria or not razon:
+            flash('Completa cantidad, categoría y razón.', 'danger')
             return redirect(url_for('gestionar_inventario'))
 
         conn = get_db_connection()
-        cur = conn.cursor(dictionary=True)
+        cur  = conn.cursor(dictionary=True)
 
         # stock actual
         cur.execute("""
@@ -1417,38 +1403,111 @@ def eliminar_inventario():
               COALESCE(SUM(salida_inventario), 0) AS salidas
             FROM inventario
         """)
-        fila = cur.fetchone()
+        fila   = cur.fetchone()
         actual = float(fila['entradas']) - float(fila['salidas'])
-
         if cantidad > actual:
-            flash('No hay suficiente inventario para eliminar esa cantidad', 'danger')
+            flash(f'No hay suficiente inventario. Disponible: {actual:.2f} L.', 'danger')
             cur.close()
             conn.close()
             return redirect(url_for('gestionar_inventario'))
 
         # nuevo total y registro con hora
         nuevo_total = actual - cantidad
-        ahora = datetime.now()
+        ahora       = datetime.now()
         cur.execute("""
             INSERT INTO inventario
               (total_inventario, salida_inventario, fecha, fecha_creacion, fecha_actualizacion)
             VALUES (%s, %s, %s, NOW(), NOW())
         """, (nuevo_total, cantidad, ahora))
 
+        # opcional: guarda categoría/razón en tabla aparte
+        # cur.execute("INSERT INTO eliminaciones(cantidad,categoria,razon,fecha) VALUES(%s,%s,%s,NOW())",
+        #             (cantidad,categoria,razon))
+
         conn.commit()
         cur.close()
         conn.close()
 
-        flash(f'Se eliminaron {cantidad:.2f} L. Total restante: {nuevo_total:.2f} L', 'success')
-        return redirect(url_for('gestionar_inventario'))
-
-    except ValueError:
-        flash('Cantidad inválida', 'danger')
-        return redirect(url_for('gestionar_inventario'))
+        flash(f'Se eliminaron {cantidad:.2f} L • Motivo: {categoria}', 'warning')
     except Exception as e:
         print("[Error eliminar_inventario]:", e)
         flash('Error al eliminar inventario', 'danger')
-        return redirect(url_for('gestionar_inventario'))
+
+    return redirect(url_for('gestionar_inventario'))
+
+
+#-------- EXPORTAR A EXCEL -----------------------------
+@app.route('/admin/inventario/export_excel')
+def export_excel():
+    conn = get_db_connection()
+    df   = pd.read_sql("SELECT fecha, entrada_inventario, salida_inventario, total_inventario "
+                       "FROM inventario ORDER BY fecha DESC", conn)
+    conn.close()
+
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Inventario')
+    output.seek(0)
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name='inventario.xlsx',
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+
+#-------- EXPORTAR A PDF -----------------------------
+@app.route('/admin/inventario/export_pdf')
+def export_pdf():
+    conn = get_db_connection()
+    cur  = conn.cursor()
+    cur.execute("SELECT fecha, entrada_inventario, salida_inventario, total_inventario "
+                "FROM inventario ORDER BY fecha DESC")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    buffer = BytesIO()
+    doc    = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    elements = [Paragraph("Historial de Inventario AggreBind", styles['Heading1'])]
+
+    data = [['Fecha y hora','Entrada (L)','Salida (L)','Total (L)']]
+    for fecha, ent, sal, tot in rows:
+        data.append([
+            fecha.strftime('%Y-%m-%d %H:%M:%S'),
+            f"{ent:.2f}", f"{sal:.2f}", f"{tot:.2f}"
+        ])
+
+    table = Table(data, hAlign='CENTER')
+    table.setStyle(TableStyle([
+        ('BACKGROUND',(0,0),(-1,0),colors.darkgreen),
+        ('TEXTCOLOR',(0,0),(-1,0),colors.whitesmoke),
+        ('GRID',(0,0),(-1,-1),0.5,colors.grey),
+        ('ALIGN',(1,1),(-1,-1),'CENTER'),
+    ]))
+    elements.append(table)
+    doc.build(elements)
+
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name='inventario.pdf',
+        mimetype='application/pdf'
+    )
+
+
+#-------- API INVENTARIO ACTUAL -----------------------------
+@app.route('/api/inventario/actual')
+def api_inventario_actual():
+    inventario = obtener_inventario_disponible()
+    return jsonify({
+        'inventario_disponible': inventario,
+        'timestamp': datetime.now().isoformat()
+    })
+
 
 #-------- 6. Eliminar cotización (admin o cliente) --------------------------
 @app.route('/eliminar_cotizacion/<int:id>', methods=['POST'])
