@@ -218,7 +218,95 @@ def actualizar_estado_orden(orden_id, nuevo_estado):
     finally:
         cursor.close()
         conn.close()
+@app.route('/admin/inventario/exportar/excel')
+def export_excel():
+    # Sólo admin
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
 
+    # 1) Consultar historial
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+    cur.execute("SELECT fecha, entrada_inventario, salida_inventario, total_inventario FROM inventario ORDER BY fecha DESC")
+    filas = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    # 2) Generar CSV en memoria
+    output = StringIO()
+    writer = csv.writer(output)
+    # Cabecera
+    writer.writerow(['Fecha', 'Entrada (L)', 'Salida (L)', 'Total (L)'])
+    # Filas
+    for item in filas:
+        fecha = item['fecha'].strftime('%Y-%m-%d %H:%M:%S')
+        entrada = item.get('entrada_inventario') or 0
+        salida  = item.get('salida_inventario')  or 0
+        total   = item.get('total_inventario')
+        writer.writerow([fecha, entrada, salida, total])
+
+    # 3) Enviar como descarga .xls
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'application/vnd.ms-excel'
+    response.headers['Content-Disposition'] = 'attachment; filename=inventario.xls'
+    return response
+
+
+# ---------------------------------
+# Exportar Inventario a PDF (Report)
+# ---------------------------------
+@app.route('/admin/inventario/exportar/pdf')
+def descargar_reporte_pdf():
+    # Sólo admin
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
+
+    # 1) Consultar historial
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+    cur.execute("SELECT fecha, entrada_inventario, salida_inventario, total_inventario FROM inventario ORDER BY fecha DESC")
+    filas = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    # 2) Construir PDF en memoria
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, title="Reporte de Inventario")
+    styles = getSampleStyleSheet()
+    elements = []
+
+    # Título
+    elements.append(Paragraph("Reporte de Inventario AggreBind", styles['Title']))
+    elements.append(Spacer(1, 12))
+
+    # Tabla
+    data = [["Fecha", "Entrada (L)", "Salida (L)", "Total (L)"]]
+    for item in filas:
+        fecha = item['fecha'].strftime('%Y-%m-%d %H:%M:%S')
+        entrada = item.get('entrada_inventario') or 0
+        salida  = item.get('salida_inventario')  or 0
+        total   = item.get('total_inventario')
+        data.append([fecha, entrada, salida, total])
+
+    table = Table(data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.darkblue),
+        ('TEXTCOLOR',   (0,0), (-1,0), colors.white),
+        ('ALIGN',       (0,0), (-1,-1), 'CENTER'),
+        ('GRID',        (0,0), (-1,-1), 0.5, colors.grey),
+        ('FONTNAME',    (0,0), (-1,0), 'Helvetica-Bold'),
+    ]))
+    elements.append(table)
+
+    # Construir y responder
+    doc.build(elements)
+    pdf = buffer.getvalue()
+    buffer.close()
+
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'attachment; filename=inventario.pdf'
+    return response
 # ----------------------------------------------------
 #  RUTAS DE CLIENTE (Cotizaciones Habilitadas y Pago)
 # ----------------------------------------------------
