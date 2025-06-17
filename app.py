@@ -1276,48 +1276,49 @@ def gestionar_inventario():
     cur  = conn.cursor(dictionary=True)
 
     # Historial ordenado (más reciente primero)
-    cur.execute("""
-        SELECT *
-        FROM inventario
-        ORDER BY fecha DESC, fecha_creacion DESC
-    """)
+    cur.execute("SELECT * FROM inventario ORDER BY fecha DESC, fecha_creacion DESC")
     historial = cur.fetchall()
 
-    # Total acumulado
+    # Totales acumulados
     cur.execute("""
-        SELECT 
-            IFNULL(SUM(entrada_inventario), 0) AS total_entradas,
-            IFNULL(SUM(salida_inventario), 0)  AS total_salidas
+        SELECT
+          IFNULL(SUM(entrada_inventario),0) AS total_entradas,
+          IFNULL(SUM(salida_inventario), 0) AS total_salidas
         FROM inventario
     """)
-    resultado = cur.fetchone()
-    entradas = float(resultado['total_entradas'])
-    salidas  = float(resultado['total_salidas'])
+    tot = cur.fetchone()
+    entradas = float(tot['total_entradas'])
+    salidas  = float(tot['total_salidas'])
     total    = entradas - salidas
 
-    # Métricas diarias
-    cur.execute("SELECT IFNULL(SUM(entrada_inventario), 0) AS agregado_hoy FROM inventario WHERE DATE(fecha) = CURDATE()")
+    # Métricas de hoy
+    cur.execute("SELECT IFNULL(SUM(entrada_inventario),0) AS agregado_hoy FROM inventario WHERE DATE(fecha)=CURDATE()")
     agregado_hoy = float(cur.fetchone()['agregado_hoy'])
-    cur.execute("SELECT IFNULL(SUM(salida_inventario), 0) AS eliminado_hoy FROM inventario WHERE DATE(fecha) = CURDATE()")
+    cur.execute("SELECT IFNULL(SUM(salida_inventario),0) AS eliminado_hoy FROM inventario WHERE DATE(fecha)=CURDATE()")
     eliminado_hoy = float(cur.fetchone()['eliminado_hoy'])
 
-    # Consumo promedio diario (últimos 7 días)
+    # Consumo promedio últimos 7 días
     cur.execute("""
-        SELECT AVG(daily.salidas) AS consumo_promedio FROM (
-            SELECT DATE(fecha) AS dia, SUM(salida_inventario) AS salidas
-            FROM inventario
-            WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-            GROUP BY DATE(fecha)
-        ) AS daily
+        SELECT AVG(d.salidas) AS consumo_promedio FROM (
+          SELECT DATE(fecha) AS dia, SUM(salida_inventario) AS salidas
+          FROM inventario
+          WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+          GROUP BY DATE(fecha)
+        ) AS d
     """)
     consumo_promedio = round(float(cur.fetchone()['consumo_promedio'] or 0), 2)
 
     cur.close()
     conn.close()
 
-    # Datos para la gráfica (últimos 30 registros invertidos para cronología ascendente)
-    labels = [item['fecha'].strftime('%d/%m') for item in historial[-30:]]
-    values = [item['total_inventario'] for item in historial[-30:]]
+    # Datos para la gráfica: toma los últimos 30 movimientos en orden cronológico ascendente
+    últimos = historial[:30][::-1]
+    history_labels = [item['fecha'].strftime('%d/%m') for item in últimos]
+    history_values = [item['total_inventario'] for item in últimos]
+
+    # Umbrales (puedes ajustar)
+    umbral_critico = consumo_promedio
+    umbral_stock   = consumo_promedio * 3
 
     return render_template(
         'gestionar_inventario.html',
@@ -1326,10 +1327,44 @@ def gestionar_inventario():
         agregado_hoy=agregado_hoy,
         eliminado_hoy=eliminado_hoy,
         consumo_promedio=consumo_promedio,
-        history_labels=labels,
-        history_values=values
+        umbral_critico=umbral_critico,
+        umbral_stock=umbral_stock,
+        history_labels=history_labels,
+        history_values=history_values
     )
 
+#-------- AGREGAR INVENTARIO -----------------------------
+@app.route('/admin/agregar_inventario', methods=['POST'])
+def agregar_inventario():
+    if session.get('rol') != 'admin':
+        flash('Acceso denegado', 'danger')
+        return redirect(url_for('login'))
+
+    try:
+        cantidad = float(request.form['cantidad'])
+        if cantidad <= 0:
+            raise ValueError
+    except Exception:
+        flash('Cantidad inválida', 'danger')
+        return redirect(url_for('gestionar_inventario'))
+
+    # calcular stock previo
+    actual = obtener_inventario_disponible()
+    nuevo_total = actual + cantidad
+
+    conn = get_db_connection()
+    cur  = conn.cursor()
+    ahora = datetime.now()
+    cur.execute("""
+      INSERT INTO inventario
+        (total_inventario, entrada_inventario, fecha, fecha_creacion, fecha_actualizacion)
+      VALUES (%s, %s, %s, NOW(), NOW())
+    """, (nuevo_total, cantidad, ahora))
+    conn.commit()
+    cur.close(); conn.close()
+
+    flash(f'+{cantidad:.2f} L agregados • Total actual: {nuevo_total:.2f} L', 'success')
+    return redirect(url_for('gestionar_inventario'))
 
 #-------- ELIMINAR INVENTARIO -----------------------------
 @app.route('/admin/eliminar_inventario', methods=['POST'])
@@ -1338,58 +1373,38 @@ def eliminar_inventario():
         flash('Acceso denegado', 'danger')
         return redirect(url_for('login'))
 
+    # validaciones básicas
     try:
         cantidad  = float(request.form['cantidad'])
-        categoria = request.form.get('categoria','').strip()
-        razon     = request.form.get('razon','').strip()
+        categoria = request.form['categoria'].strip()
+        razon     = request.form['razon'].strip()
         if cantidad <= 0 or not categoria or not razon:
-            flash('Completa cantidad, categoría y razón.', 'danger')
-            return redirect(url_for('gestionar_inventario'))
+            raise ValueError
+    except Exception:
+        flash('Completa cantidad, categoría y razón válidas.', 'danger')
+        return redirect(url_for('gestionar_inventario'))
 
-        conn = get_db_connection()
-        cur  = conn.cursor(dictionary=True)
+    actual = obtener_inventario_disponible()
+    if cantidad > actual:
+        flash(f'No hay suficiente stock (Disp: {actual:.2f} L).', 'danger')
+        return redirect(url_for('gestionar_inventario'))
 
-        # stock actual
-        cur.execute("""
-            SELECT
-              COALESCE(SUM(entrada_inventario),0) AS entradas,
-              COALESCE(SUM(salida_inventario), 0) AS salidas
-            FROM inventario
-        """)
-        fila   = cur.fetchone()
-        actual = float(fila['entradas']) - float(fila['salidas'])
-        if cantidad > actual:
-            flash(f'No hay suficiente inventario. Disponible: {actual:.2f} L.', 'danger')
-            cur.close()
-            conn.close()
-            return redirect(url_for('gestionar_inventario'))
+    nuevo_total = actual - cantidad
+    conn = get_db_connection()
+    cur  = conn.cursor()
+    ahora = datetime.now()
+    cur.execute("""
+      INSERT INTO inventario
+        (total_inventario, salida_inventario, fecha, fecha_creacion, fecha_actualizacion)
+      VALUES (%s, %s, %s, NOW(), NOW())
+    """, (nuevo_total, cantidad, ahora))
+    conn.commit()
+    cur.close(); conn.close()
 
-        # nuevo total y registro con hora
-        nuevo_total = actual - cantidad
-        ahora       = datetime.now()
-        cur.execute("""
-            INSERT INTO inventario
-              (total_inventario, salida_inventario, fecha, fecha_creacion, fecha_actualizacion)
-            VALUES (%s, %s, %s, NOW(), NOW())
-        """, (nuevo_total, cantidad, ahora))
-
-        # opcional: guarda categoría/razón en tabla aparte
-        # cur.execute("INSERT INTO eliminaciones(cantidad,categoria,razon,fecha) VALUES(%s,%s,%s,NOW())",
-        #             (cantidad,categoria,razon))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        flash(f'Se eliminaron {cantidad:.2f} L • Motivo: {categoria}', 'warning')
-    except Exception as e:
-        print("[Error eliminar_inventario]:", e)
-        flash('Error al eliminar inventario', 'danger')
-
+    flash(f'-{cantidad:.2f} L • Motivo: {categoria}', 'warning')
     return redirect(url_for('gestionar_inventario'))
 
-
-# Exportar a Excel — inventario
+#-------- EXPORTAR A EXCEL — inventario -----------------------------
 @app.route('/admin/inventario/exportar/excel')
 def export_excel_inventario():
     conn = get_db_connection()
@@ -1412,7 +1427,7 @@ def export_excel_inventario():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
-# Exportar a PDF — inventario
+#-------- EXPORTAR A PDF — inventario -----------------------------
 @app.route('/admin/inventario/exportar/pdf')
 def export_pdf_inventario():
     conn = get_db_connection()
@@ -1422,8 +1437,7 @@ def export_pdf_inventario():
         "FROM inventario ORDER BY fecha DESC"
     )
     rows = cur.fetchall()
-    cur.close()
-    conn.close()
+    cur.close(); conn.close()
 
     buffer = BytesIO()
     doc    = SimpleDocTemplate(buffer, pagesize=letter)
@@ -1436,7 +1450,6 @@ def export_pdf_inventario():
             fecha.strftime('%Y-%m-%d %H:%M:%S'),
             f"{ent:.2f}", f"{sal:.2f}", f"{tot:.2f}"
         ])
-
     table = Table(data, hAlign='CENTER')
     table.setStyle(TableStyle([
         ('BACKGROUND',(0,0),(-1,0),colors.darkgreen),
@@ -1455,13 +1468,12 @@ def export_pdf_inventario():
         mimetype='application/pdf'
     )
 
-
 #-------- API INVENTARIO ACTUAL -----------------------------
 @app.route('/api/inventario/actual')
 def api_inventario_actual():
-    inventario = obtener_inventario_disponible()
+    inv = obtener_inventario_disponible()
     return jsonify({
-        'inventario_disponible': inventario,
+        'inventario_disponible': inv,
         'timestamp': datetime.now().isoformat()
     })
 
