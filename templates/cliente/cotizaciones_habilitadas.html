@@ -4,63 +4,147 @@
   <meta charset="UTF-8">
   <title>Cotizaciones para Pago</title>
   <link href="../../static/cotizacion_habilitada.css" rel="stylesheet">
-  
+
+  <!-- DataTables + jQuery -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+
+  <style>
+    /* … aquí van todos tus estilos previos … */
+/* Diseño específico para el botón de orden */
+#toggleOrden {
+  background: linear-gradient(135deg, #28a745, #37b02e);
+  color: #fff;
+  border: none;
+  padding: 0.8rem 1.6rem;
+  border-radius: 0.6rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 1rem;
+}
+
+/* Hover: elevarse un poco y sombra más intensa */
+#toggleOrden:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+/* Active: volver a su posición original */
+#toggleOrden:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+}
+
+    /* 1) Evito que los th reciban clicks, pero dejo el orden programático */
+    #tablaCotizaciones thead th {
+      pointer-events: none;
+      cursor: default;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Cotizaciones Habilitadas para Pago</h1>
-    <a href="{{ url_for('calculadora') }}" class="btn-volver">&larr; Volver</a>
 
-    {% if cotizaciones %}
-      <div class="tabla-contenedor">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Longitud</th>
-              <th>Ancho</th>
-              <th>Profundidad</th>
-              <th>Polímero (L)</th>
-              <th>Agua (L)</th>
-              <th>Total (Monto)</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for c in cotizaciones %}
-              <tr>
-                <td>{{ c.id }}</td>
-                <td>{{ c.longitud }}</td>
-                <td>{{ c.ancho }}</td>
-                <td>{{ c.profundidad }}</td>
-                <td>{{ c.aggrebind }}</td>
-                <td>{{ c.agua }}</td>
-                <td>${{ "%.2f"|format(c.total) }}</td>
-                <td>
-                  {% if c.pagada %}
-                    <span class="text-success">Pagada</span>
-                  {% else %}
-                    <span class="text-warning">Pendiente</span>
-                  {% endif %}
-                </td>
-                <td>
-                  {% if not c.pagada %}
-                    <a href="{{ url_for('pagar_cotizacion', cotizacion_id=c.id) }}" class="btn-pagar">
-                      Pagar
-                    </a>
-                  {% else %}
-                    <span class="text-muted">Pagada</span>
-                  {% endif %}
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <p>No hay cotizaciones registradas.</p>
-    {% endif %}
+<nav class="nav">
+  <div class="logo">
+    <img src="../static/imagenes/AggreBind-White-logo (1).png" alt="Logo">
   </div>
+  <div class="main_list">
+    <ul>
+      <li>
+        <a href="{{ url_for('notificaciones') }}" class="btn-primary">Notificaciones</a>
+      </li>
+      <li>
+        <a href="{{ url_for('mis_cotizaciones_pendientes') }}" class="btn-primary">Cotizaciones Pendientes</a>
+      </li>
+      <li>
+        <a href="{{ url_for('cotizaciones_habilitadas_cliente') }}" class="btn-primary">Cotizaciones para Pago</a>
+      </li>
+      <li>
+        <a href="{{ url_for('logout') }}" class="btn">Cerrar sesión</a>
+      </li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+  <h1>Cotizaciones Habilitadas para Pago</h1>
+  <a href="{{ url_for('calculadora') }}" class="btn-volver">&larr; Volver</a>
+
+  {% if cotizaciones %}
+    <button id="toggleOrden" class="boton">Ordenar por más antiguas</button>
+    <div class="tabla-contenedor">
+      <table id="tablaCotizaciones" class="display">
+        <thead>
+          <tr>
+            <th>ID</th><th>Longitud</th><th>Ancho</th><th>Profundidad</th>
+            <th>Polímero (L)</th><th>Agua (L)</th><th>Total (Monto)</th>
+            <th>Estado</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in cotizaciones %}
+          <tr>
+            <td>{{ c.id }}</td>
+            <td>{{ c.longitud }}</td>
+            <td>{{ c.ancho }}</td>
+            <td>{{ c.profundidad }}</td>
+            <td>{{ c.aggrebind }}</td>
+            <td>{{ c.agua }}</td>
+            <td>${{ "%.2f"|format(c.total) }}</td>
+            <td>
+              {% if c.pagada %}
+                <span class="text-success">Pagada</span>
+              {% else %}
+                <span class="text-warning">Pendiente</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if not c.pagada %}
+                <a href="{{ url_for('pagar_cotizacion', cotizacion_id=c.id) }}" class="btn-pagar">Pagar</a>
+              {% else %}
+                <span class="text-muted">Pagada</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p>No hay cotizaciones registradas.</p>
+  {% endif %}
+</div>
+
+<script>
+  let ordenDesc = true;
+
+  const tabla = $('#tablaCotizaciones').DataTable({
+    ordering:       true,       // ✅ habilitamos orden programático
+    order:          [[0, 'desc']],
+    paging:         true,
+    info:           true,
+    searching:      false,      // ocultamos buscador
+    lengthChange:   false,      // ocultamos "Mostrar N"
+    language: {
+      url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
+    }
+  });
+
+  document.getElementById('toggleOrden')
+    .addEventListener('click', () => {
+      ordenDesc = !ordenDesc;
+      tabla.order([0, ordenDesc ? 'desc' : 'asc']).draw();
+      document.getElementById('toggleOrden').textContent =
+        ordenDesc
+          ? 'Ordenar por más antiguas'
+          : 'Ordenar por más recientes';
+    });
+</script>
+
 </body>
 </html>

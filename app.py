@@ -1040,12 +1040,26 @@ def envios_asignados():
         return redirect(url_for('login'))
 
     conn = get_db_connection()
-    cur = conn.cursor(dictionary=True)
+    cur  = conn.cursor(dictionary=True)
 
     if request.method == 'POST':
-        envio_id = request.form['envio_id']
+        envio_id     = request.form['envio_id']
         nuevo_estado = request.form['estado_envio']
 
+        # Si el nuevo estado es "Entregado", liberamos el vehículo
+        if nuevo_estado == 'Entregado':
+            cur.execute(
+                "SELECT vehiculo_id FROM ordenes WHERE id = %s",
+                (envio_id,)
+            )
+            fila = cur.fetchone()
+            if fila and fila['vehiculo_id']:
+                cur.execute(
+                    "UPDATE vehiculos SET disponible = 1 WHERE id = %s",
+                    (fila['vehiculo_id'],)
+                )
+
+        # Actualizamos el estado de la orden
         cur.execute("""
             UPDATE ordenes
             SET estado_envio = %s
@@ -1055,22 +1069,29 @@ def envios_asignados():
         conn.commit()
         flash("Estado del envío actualizado correctamente", "success")
 
-    # Obtén los envíos asignados para mostrar
+    # Obtener los envíos asignados para mostrar
     cur.execute("""
-        SELECT o.id, u.nombre, u.apellido, o.direccion_envio, o.estado_envio, v.placa, c.nombre AS conductor
-        FROM ordenes o
-        JOIN usuarios u ON o.cliente_id = u.id
-        JOIN vehiculos v ON o.vehiculo_id = v.id
-        JOIN conductores c ON o.conductor_id = c.id
-        WHERE o.estado_envio IN ('En curso', 'Pendiente', 'En ruta')
-        ORDER BY o.fecha_creacion DESC
+        SELECT o.id,
+               u.nombre,
+               u.apellido,
+               o.direccion_envio,
+               o.estado_envio,
+               v.placa,
+               c.nombre AS conductor
+          FROM ordenes o
+          JOIN usuarios u    ON o.cliente_id  = u.id
+          JOIN vehiculos v   ON o.vehiculo_id = v.id
+          JOIN conductores c ON o.conductor_id = c.id
+         WHERE o.estado_envio IN ('En curso', 'Pendiente', 'En ruta')
+         ORDER BY o.fecha_creacion DESC
     """)
-
     envios = cur.fetchall()
+
     cur.close()
     conn.close()
 
     return render_template('admin/envios_asignados.html', envios=envios)
+
 
 # ------------------------------
 # 7. RUTAS FLASK (Gestión de Envíos)

@@ -7,6 +7,15 @@ html, body {
   background-image: url(imagenes/352993-admin.jpg);
   background-size: cover;
 }
+.nav {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 1000; /* para que quede encima del contenido */
+}
+body {
+  padding-top: 80px; /* espacio para que el contenido no quede tapado por la barra */
+}
 
 .mensaje-animado {
   opacity: 0;

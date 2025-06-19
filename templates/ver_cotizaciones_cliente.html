@@ -10,6 +10,33 @@
   >
 </head>
 <body>
+  <nav class="nav">
+  <div class="logo">
+    <img src="../static/imagenes/AggreBind-White-logo (1).png" alt="Logo">
+  </div>
+  <div class="main_list">
+    <ul>
+      <li>
+        <a href="{{ url_for('notificaciones') }}" class="btn-primary">Notificaciones</a>
+      </li>
+      <!-- Enlace existente a cotizaciones pendientes -->
+      <li>
+        <a href="{{ url_for('mis_cotizaciones_pendientes') }}" class="btn-primary">
+          Cotizaciones Pendientes
+        </a>
+      </li>
+      <!-- Nuevo enlace para cotizaciones habilitadas (para pagar) -->
+      <li>
+        <a href="{{ url_for('cotizaciones_habilitadas_cliente') }}" class="btn-primary">
+          Cotizaciones para Pago
+        </a>
+      </li>
+      <li>
+        <a href="{{ url_for('logout') }}" class="btn">Cerrar sesión</a>
+      </li>
+    </ul>
+  </div>
+</nav>
   <div class="pending-container">
     <h1>Mis Cotizaciones Pendientes</h1>
     <a class="back-link" href="{{ url_for('calculadora') }}">
