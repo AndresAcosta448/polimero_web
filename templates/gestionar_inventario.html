@@ -26,8 +26,7 @@
     <div class="container-fluid">
       <span class="navbar-brand">Panel Admin</span>
       <div class="d-flex align-items-center">
-        <span class="text-white me-3">Bienvenido,</span>
-        <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
+      <span class="navbar-text text-white me-3">Bienvenido, {{ nombre }}</span>        <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
       </div>
     </div>
   </nav>

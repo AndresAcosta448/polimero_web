@@ -7,19 +7,26 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='agregar_conductor.css') }}">
 </head>
 <body>
-  <div class="d-flex">
+   <div class="d-flex">
     {% include 'sidebar.html' %}
-    <div class="flex-fill">
-      {% include 'navbar_admin.html' %}
+    <div class="flex-fill p-4">
+
+
+<nav class="navbar navbar-dark bg-dark sticky-top mb-4">
+    <div class="container-fluid">
+      <span class="navbar-brand">Panel Admin</span>
+      <div class="d-flex align-items-center">
+        <span class="text-white me-3">Bienvenido,</span>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
+      </div>
+    </div>
+  </nav>
+
 
       <div class="container-form">
         <div class="form-card">
           <h1>Agregar Conductor</h1>
-          <p>
-            <a href="{{ url_for('listar_envios_route') }}" class="text-decoration-none text-success">
-              &larr; Volver a Envíos
-            </a>
-          </p>
+
 
           <!-- Flash messages -->
           {% with messages = get_flashed_messages(with_categories=true) %}

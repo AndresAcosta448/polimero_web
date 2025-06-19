@@ -9,8 +9,9 @@ from pathlib import Path
 
 from flask import (
     Flask, render_template, request, redirect, url_for,
-    session, flash, jsonify, send_file
+    session, flash, jsonify, send_file, make_response
 )
+
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Mail, Message
 import mysql.connector
@@ -176,13 +177,13 @@ def compras_pdf():
 def get_db_connection():
     try:
         conn = mysql.connector.connect(
-            host='localhost',
-            port=3306,
-            user='root',
-            password='1234',
-            database='polimero_db'
+            host=os.getenv('DB_HOST'),
+            port=int(os.getenv('DB_PORT', 23787)),
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'),
+            database=os.getenv('DB_NAME')
         )
-        print("✅ Conectado a la base de datos local")
+        print(f"✅ Conectado a base: {os.getenv('DB_NAME')}")
         return conn
     except Error as e:
         print(f"[Error] No se pudo conectar a MySQL: {e}")
@@ -1068,19 +1069,22 @@ def ordenes_pendientes():
 
 @app.route('/admin/envios_asignados', methods=['GET', 'POST'])
 def envios_asignados():
+    # 0) Control de acceso
     if session.get('rol') != 'admin':
         return redirect(url_for('login'))
 
+    # 1) Conexión
     conn = get_db_connection()
     cur  = conn.cursor(dictionary=True)
 
+    # 2) Si vienen datos por POST, actualizamos estados, liberamos vehículo, notificamos...
     if request.method == 'POST':
         envio_id     = request.form['envio_id']
         nuevo_estado = request.form['estado_envio']
 
         if nuevo_estado == 'Entregado':
-            # Liberar vehículo
-            cur.execute("SELECT vehiculo_id FROM envios WHERE id = %s", (envio_id,))
+            # 2.1) Liberar vehículo leyendo desde ordenes
+            cur.execute("SELECT vehiculo_id FROM ordenes WHERE id = %s", (envio_id,))
             fila = cur.fetchone()
             if fila and fila['vehiculo_id']:
                 cur.execute(
@@ -1088,7 +1092,7 @@ def envios_asignados():
                     (fila['vehiculo_id'],)
                 )
 
-            # Marcar entrega en la tabla envios
+            # 2.2) Marcar entrega en envios (para el historial si lo usas)
             cur.execute("""
                 UPDATE envios
                    SET estado       = %s,
@@ -1096,20 +1100,20 @@ def envios_asignados():
                  WHERE id = %s
             """, (nuevo_estado, envio_id))
 
-            # Notificaciones: insertar en BD y enviar correo
+            # 2.3) Notificaciones: interna y por correo
             cur.execute("SELECT cliente_id FROM ordenes WHERE id = %s", (envio_id,))
             fila_cli = cur.fetchone()
             if fila_cli and fila_cli['cliente_id']:
                 cliente_id = fila_cli['cliente_id']
 
-                # Interna
+                # 2.3.1) Notificación interna
                 mensaje_notif = "Tu pedido ha sido entregado con éxito. ¡Gracias por confiar en nosotros!"
                 cur.execute(
                     "INSERT INTO notificaciones (usuario_id, mensaje, fecha) VALUES (%s, %s, NOW())",
                     (cliente_id, mensaje_notif)
                 )
 
-                # Por correo
+                # 2.3.2) Correo al cliente
                 cur.execute("SELECT correo FROM usuarios WHERE id = %s", (cliente_id,))
                 correo = cur.fetchone()['correo']
                 msg = Message(
@@ -1124,7 +1128,7 @@ def envios_asignados():
                 )
                 mail.send(msg)
 
-        # Siempre sincronizamos la tabla ordenes
+        # 2.4) Siempre sincronizamos la tabla ordenes
         cur.execute("""
             UPDATE ordenes
                SET estado_envio = %s
@@ -1134,7 +1138,7 @@ def envios_asignados():
         conn.commit()
         flash("Estado del envío actualizado correctamente", "success")
 
-    # Cargamos los envíos aún activos para la vista
+    # 3) Cargamos para mostrar los envíos aún activos
     cur.execute("""
         SELECT o.id,
                u.nombre, u.apellido,
@@ -1149,13 +1153,146 @@ def envios_asignados():
     """)
     envios = cur.fetchall()
 
+    # 4) Cerramos conexión y devolvemos la plantilla
+    cur.close()
+    conn.close()
+    return render_template('admin/envios_asignados.html', envios=envios)
+@app.route('/admin/historial_cotizaciones')
+def historial_cotizaciones():
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
+
+    # 1.1) Leer filtros de la query string
+    filtro_id      = request.args.get('id', '').strip()
+    filtro_cliente = request.args.get('cliente', '').strip()
+    filtro_poly    = request.args.get('poly', '').strip()
+
+    # 1.2) Construir WHERE dinámico
+    filtros = []
+    params  = []
+
+    if filtro_id:
+        filtros.append("c.id = %s")
+        params.append(filtro_id)
+
+    if filtro_cliente:
+        filtros.append("(u.nombre LIKE %s OR u.apellido LIKE %s)")
+        params.extend([f"%{filtro_cliente}%", f"%{filtro_cliente}%"])
+
+    if filtro_poly:
+        filtros.append("c.aggrebind = %s")
+        params.append(filtro_poly)
+
+    # 1.3) Consulta base
+    sql = """
+      SELECT c.id,
+             u.nombre,
+             u.apellido,
+             c.longitud,
+             c.ancho,
+             c.profundidad,
+             c.aggrebind,
+             c.agua,
+             c.total,
+             c.habilitado
+        FROM cotizaciones c
+        JOIN usuarios u ON c.cliente_id = u.id
+    """
+    if filtros:
+        sql += " WHERE " + " AND ".join(filtros)
+    sql += " ORDER BY c.id DESC"
+
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute(sql, params)
+    cots = cur.fetchall()
+    cur.close(); conn.close()
+
+    return render_template(
+      'admin/historial_cotizaciones.html',
+      cotizaciones=cots,
+      filtro_id=filtro_id,
+      filtro_cliente=filtro_cliente,
+      filtro_poly=filtro_poly
+    )
+
+    return render_template('admin/historial_cotizaciones.html', cotizaciones=cots)
+
+
+@app.route('/admin/reportes/cotizaciones/pdf')
+def cotizaciones_pdf():
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
+
+    # 1) Recuperar datos sin fecha_creacion que no existe
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute("""
+      SELECT c.id,
+             u.nombre,
+             u.apellido,
+             c.longitud,
+             c.ancho,
+             c.profundidad,
+             c.aggrebind,
+             c.agua,
+             c.total,
+             c.habilitado
+        FROM cotizaciones c
+        JOIN usuarios u ON c.cliente_id = u.id
+       ORDER BY c.id DESC
+    """)
+    rows = cur.fetchall()
     cur.close()
     conn.close()
 
-    return render_template('admin/envios_asignados.html', envios=envios)
+    # 2) Generar PDF en memoria
+    buffer = BytesIO()
+    doc    = SimpleDocTemplate(buffer, pagesize=letter, title="Informe de Cotizaciones")
+    styles = getSampleStyleSheet()
+    elements = [
+        Paragraph("Informe de Cotizaciones", styles['Title']),
+        Spacer(1, 12)
+    ]
 
+    # 3) Definir cabecera y filas (sin fecha)
+    data = [
+        ["ID", "Cliente", "Largo", "Ancho", "Profundidad", "Polímero", "Agua", "Total", "Estado"]
+    ]
+    for o in rows:
+        cliente = f"{o['nombre']} {o['apellido']}"
+        estado  = "Habilitada" if o['habilitado'] else "Pendiente"
+        data.append([
+            o['id'],
+            cliente,
+            str(o['longitud']),
+            str(o['ancho']),
+            str(o['profundidad']),
+            str(o['aggrebind']),
+            str(o['agua']),
+            f"${o['total']:,.2f}",
+            estado
+        ])
 
+    table = Table(data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+        ('TEXTCOLOR',   (0, 0), (-1, 0), colors.white),
+        ('ALIGN',       (0, 0), (-1, -1), 'CENTER'),
+        ('GRID',        (0, 0), (-1, -1), 0.5, colors.grey),
+        ('FONTNAME',    (0, 0), (-1, 0), 'Helvetica-Bold'),
+    ]))
 
+    elements.append(table)
+    doc.build(elements)
+
+    # 4) Devolver el PDF
+    pdf = buffer.getvalue()
+    buffer.close()
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'attachment; filename=cotizaciones.pdf'
+    return response
 
 # ------------------------------
 # 7. RUTAS FLASK (Gestión de Envíos)
