@@ -176,17 +176,21 @@ def compras_pdf():
 def get_db_connection():
     try:
         conn = mysql.connector.connect(
-            host=os.getenv('DB_HOST'),
-            port=int(os.getenv('DB_PORT', 23787)),
-            user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD'),
-            database=os.getenv('DB_NAME')
+            host='localhost',
+            port=3306,
+            user='root',
+            password='1234',
+            database='polimero_db'
         )
-        print(f"✅ Conectado a base: {os.getenv('DB_NAME')}")
+        print("✅ Conectado a la base de datos local")
         return conn
     except Error as e:
         print(f"[Error] No se pudo conectar a MySQL: {e}")
         return None
+
+
+
+
 def get_usuario_correo(usuario_id):
     """
     Retorna el correo del usuario dado su ID.
@@ -254,6 +258,32 @@ def actualizar_estado_orden(orden_id, nuevo_estado):
     finally:
         cursor.close()
         conn.close()
+
+@app.route('/admin/historial_envios')
+def historial_envios():
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute("""
+        SELECT 
+          o.id,
+          o.direccion_envio   AS destino,
+          v.placa             AS vehiculo,
+          c.nombre            AS conductor,
+          o.fecha_actualizacion AS fecha_entrega
+        FROM ordenes o
+        LEFT JOIN vehiculos v   ON o.vehiculo_id = v.id
+        LEFT JOIN conductores c ON o.conductor_id = c.id
+        WHERE o.estado_envio = 'Entregado'
+        ORDER BY o.fecha_actualizacion DESC
+    """)
+    envios = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return render_template('admin/historial_envios.html', envios=envios)
 
 # ----------------------------------------------------
 #  RUTAS DE CLIENTE (Cotizaciones Habilitadas y Pago)
@@ -1034,6 +1064,8 @@ def ordenes_pendientes():
     if session.get('rol')!='admin': return redirect(url_for('login'))
     ordenes=listar_ordenes_pendientes()
     return render_template('admin/ordenes_pendientes.html', ordenes=ordenes, nombre=session.get('usuario_nombre'))
+
+
 @app.route('/admin/envios_asignados', methods=['GET', 'POST'])
 def envios_asignados():
     if session.get('rol') != 'admin':
@@ -1046,12 +1078,9 @@ def envios_asignados():
         envio_id     = request.form['envio_id']
         nuevo_estado = request.form['estado_envio']
 
-        # Si el nuevo estado es "Entregado", liberamos el vehículo
         if nuevo_estado == 'Entregado':
-            cur.execute(
-                "SELECT vehiculo_id FROM ordenes WHERE id = %s",
-                (envio_id,)
-            )
+            # Liberar vehículo
+            cur.execute("SELECT vehiculo_id FROM envios WHERE id = %s", (envio_id,))
             fila = cur.fetchone()
             if fila and fila['vehiculo_id']:
                 cur.execute(
@@ -1059,30 +1088,63 @@ def envios_asignados():
                     (fila['vehiculo_id'],)
                 )
 
-        # Actualizamos el estado de la orden
+            # Marcar entrega en la tabla envios
+            cur.execute("""
+                UPDATE envios
+                   SET estado       = %s,
+                       fecha_entrega = NOW()
+                 WHERE id = %s
+            """, (nuevo_estado, envio_id))
+
+            # Notificaciones: insertar en BD y enviar correo
+            cur.execute("SELECT cliente_id FROM ordenes WHERE id = %s", (envio_id,))
+            fila_cli = cur.fetchone()
+            if fila_cli and fila_cli['cliente_id']:
+                cliente_id = fila_cli['cliente_id']
+
+                # Interna
+                mensaje_notif = "Tu pedido ha sido entregado con éxito. ¡Gracias por confiar en nosotros!"
+                cur.execute(
+                    "INSERT INTO notificaciones (usuario_id, mensaje, fecha) VALUES (%s, %s, NOW())",
+                    (cliente_id, mensaje_notif)
+                )
+
+                # Por correo
+                cur.execute("SELECT correo FROM usuarios WHERE id = %s", (cliente_id,))
+                correo = cur.fetchone()['correo']
+                msg = Message(
+                    subject="Pedido entregado ✔",
+                    recipients=[correo]
+                )
+                msg.body = (
+                    f"¡Hola!\n\n"
+                    f"Tu pedido con ID #{envio_id} ha sido entregado con éxito.\n"
+                    "Esperamos que quedes satisfecho con tu compra.\n\n"
+                    "¡Gracias por elegirnos!"
+                )
+                mail.send(msg)
+
+        # Siempre sincronizamos la tabla ordenes
         cur.execute("""
             UPDATE ordenes
-            SET estado_envio = %s
-            WHERE id = %s
+               SET estado_envio = %s
+             WHERE id = %s
         """, (nuevo_estado, envio_id))
 
         conn.commit()
         flash("Estado del envío actualizado correctamente", "success")
 
-    # Obtener los envíos asignados para mostrar
+    # Cargamos los envíos aún activos para la vista
     cur.execute("""
         SELECT o.id,
-               u.nombre,
-               u.apellido,
-               o.direccion_envio,
-               o.estado_envio,
-               v.placa,
-               c.nombre AS conductor
+               u.nombre, u.apellido,
+               o.direccion_envio, o.estado_envio,
+               v.placa, c.nombre AS conductor
           FROM ordenes o
           JOIN usuarios u    ON o.cliente_id  = u.id
           JOIN vehiculos v   ON o.vehiculo_id = v.id
           JOIN conductores c ON o.conductor_id = c.id
-         WHERE o.estado_envio IN ('En curso', 'Pendiente', 'En ruta')
+         WHERE o.estado_envio IN ('Pendiente','En ruta','En curso')
          ORDER BY o.fecha_creacion DESC
     """)
     envios = cur.fetchall()
@@ -1091,6 +1153,8 @@ def envios_asignados():
     conn.close()
 
     return render_template('admin/envios_asignados.html', envios=envios)
+
+
 
 
 # ------------------------------

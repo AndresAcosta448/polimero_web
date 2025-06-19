@@ -1,0 +1,36 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Historial de Envíos{% endblock %}
+
+{% block content %}
+  <h1>Historial de Envíos Entregados</h1>
+
+  {% if envios %}
+    <div class="table-responsive">
+      <table class="table table-striped table-hover align-middle">
+        <thead class="table-success">
+          <tr>
+            <th>ID</th>
+            <th>Destino</th>
+            <th>Vehículo</th>
+            <th>Conductor</th>
+            <th>Fecha de Entrega</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in envios %}
+          <tr>
+            <td>{{ e.id }}</td>
+            <td>{{ e.destino }}</td>
+            <td>{{ e.vehiculo or '—' }}</td>
+            <td>{{ e.conductor or '—' }}</td>
+            <td>{{ e.fecha_entrega.strftime('%Y-%m-%d %H:%M') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="text-muted">No hay envíos entregados.</p>
+  {% endif %}
+{% endblock %}

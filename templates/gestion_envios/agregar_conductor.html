@@ -16,7 +16,7 @@
         <div class="form-card">
           <h1>Agregar Conductor</h1>
           <p>
-            <a href="{{ url_for('listar_envios_route') }}" style="text-decoration: none; color: var(--verde);">
+            <a href="{{ url_for('listar_envios_route') }}" class="text-decoration-none text-success">
               &larr; Volver a Envíos
             </a>
           </p>
@@ -24,64 +24,99 @@
           <!-- Flash messages -->
           {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-              <ul class="flash-list">
+              <ul class="flash-list list-unstyled">
                 {% for category, msg in messages %}
-                  <li class="{{ category }}">{{ msg }}</li>
+                  <li class="alert alert-{{ category }}">{{ msg }}</li>
                 {% endfor %}
               </ul>
             {% endif %}
           {% endwith %}
 
-          <form action="{{ url_for('agregar_conductor_route') }}" method="POST">
-            <!-- Nombre -->
-            <label for="nombre">Nombre:</label>
-            <input
-              type="text"
-              name="nombre"
-              id="nombre"
-              required
-              minlength="2"
-              maxlength="20"
-              pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]{2,20}"
-              placeholder="Nombre"
-              title="El nombre debe tener entre 2 y 20 letras"
-              oninvalid="this.setCustomValidity('El nombre debe tener entre 2 y 20 letras')"
-              oninput="this.setCustomValidity('')"
-              class="form-control"
-            >
+          <!-- Formulario para agregar conductor -->
+          <form action="{{ url_for('agregar_conductor_route') }}" method="POST" class="mb-4">
+            <div class="mb-3">
+              <label for="nombre" class="form-label">Nombre:</label>
+              <input
+                type="text"
+                name="nombre"
+                id="nombre"
+                class="form-control"
+                required
+                minlength="2"
+                maxlength="20"
+                pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]{2,20}"
+                placeholder="Nombre"
+                title="El nombre debe tener entre 2 y 20 letras"
+              >
+            </div>
 
-            <!-- Cédula -->
-            <label for="cedula">Cédula:</label>
-            <input
-              type="text"
-              name="cedula"
-              id="cedula"
-              required
-              pattern="\d{10}"
-              placeholder="Cédula (10 dígitos)"
-              title="La cédula debe tener exactamente 10 números"
-              oninvalid="this.setCustomValidity('La cédula debe tener exactamente 10 números')"
-              oninput="this.setCustomValidity('')"
-              class="form-control"
-            >
+            <div class="mb-3">
+              <label for="cedula" class="form-label">Cédula:</label>
+              <input
+                type="text"
+                name="cedula"
+                id="cedula"
+                class="form-control"
+                required
+                pattern="\d{10}"
+                placeholder="Cédula (10 dígitos)"
+                title="La cédula debe tener exactamente 10 números"
+              >
+            </div>
 
-            <!-- Teléfono -->
-            <label for="telefono">Teléfono:</label>
-            <input
-              type="text"
-              name="telefono"
-              id="telefono"
-              required
-              pattern="\d{7,10}"
-              placeholder="Teléfono (7 a 10 dígitos)"
-              title="El teléfono debe tener entre 7 y 10 números"
-              oninvalid="this.setCustomValidity('El teléfono debe tener entre 7 y 10 números')"
-              oninput="this.setCustomValidity('')"
-              class="form-control"
-            >
+            <div class="mb-3">
+              <label for="telefono" class="form-label">Teléfono:</label>
+              <input
+                type="text"
+                name="telefono"
+                id="telefono"
+                class="form-control"
+                required
+                pattern="\d{7,10}"
+                placeholder="Teléfono (7 a 10 dígitos)"
+                title="El teléfono debe tener entre 7 y 10 números"
+              >
+            </div>
 
-            <button type="submit" class="btn-gestionar-admins mt-3">Guardar Conductor</button>
+            <button type="submit" class="btn btn-success">Guardar Conductor</button>
           </form>
+
+          <!-- Sección para listar y eliminar conductores -->
+          <div class="table-responsive">
+            <h2>Conductores Registrados</h2>
+            <table class="table table-striped align-middle">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Cédula</th>
+                  <th>Teléfono</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for cond in conductores %}
+                <tr>
+                  <td>{{ cond.nombre }}</td>
+                  <td>{{ cond.cedula }}</td>
+                  <td>{{ cond.telefono or '-' }}</td>
+                  <td>
+                    <form 
+                      method="POST" 
+                      action="{{ url_for('eliminar_conductor_route') }}" 
+                      onsubmit="return confirm('¿Eliminar al conductor {{ cond.nombre }}?');"
+                      style="display:inline;"
+                    >
+                      <input type="hidden" name="conductor_id" value="{{ cond.id }}">
+                      <button type="submit" class="btn btn-sm btn-danger">
+                        Eliminar
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
