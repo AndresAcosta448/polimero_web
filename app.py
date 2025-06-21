@@ -177,17 +177,18 @@ def compras_pdf():
 def get_db_connection():
     try:
         conn = mysql.connector.connect(
-            host=os.getenv('DB_HOST'),
-            port=int(os.getenv('DB_PORT', 23787)),
-            user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD'),
-            database=os.getenv('DB_NAME')
+            host='localhost',
+            port=3306,
+            user='root',
+            password='',
+            database='polimero_db'
         )
-        print(f"✅ Conectado a base: {os.getenv('DB_NAME')}")
+        print("✅ Conectado a la base de datos local")
         return conn
     except Error as e:
         print(f"[Error] No se pudo conectar a MySQL: {e}")
         return None
+
 
 
 
@@ -289,6 +290,58 @@ def historial_envios():
 # ----------------------------------------------------
 #  RUTAS DE CLIENTE (Cotizaciones Habilitadas y Pago)
 # ----------------------------------------------------
+
+@app.route('/rechazar_cotizacion/<int:id>', methods=['POST'])
+def rechazar_cotizacion(id):
+    if session.get('rol') != 'admin':
+        flash('Acceso denegado', 'danger')
+        return redirect(url_for('login'))
+
+    motivo = request.form.get('motivo', '').strip()
+    if not motivo:
+        flash('Debes escribir el motivo del rechazo.', 'warning')
+        return redirect(url_for('ver_cotizaciones'))
+
+    # Obtener correo y datos del cliente
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute("""
+        SELECT u.correo, u.nombre, u.apellido
+        FROM cotizaciones c
+        JOIN usuarios u ON c.cliente_id = u.id
+        WHERE c.id = %s
+    """, (id,))
+    cliente = cur.fetchone()
+
+    if not cliente:
+        cur.close(); conn.close()
+        flash('Cotización no encontrada.', 'danger')
+        return redirect(url_for('ver_cotizaciones'))
+
+    # Eliminar cotización
+    cur.execute("DELETE FROM cotizaciones WHERE id = %s", (id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    # Enviar correo con motivo del rechazo
+    msg = Message(
+        subject="Cotización Rechazada - Polímeros S.A.",
+        recipients=[cliente['correo']]
+    )
+    msg.body = (
+        f"Hola {cliente['nombre']} {cliente['apellido']},\n\n"
+        f"Tu cotización #{id} ha sido rechazada por el siguiente motivo:\n\n"
+        f"{motivo}\n\n"
+        "Puedes realizar una nueva solicitud cuando desees.\n\n"
+        "Atentamente,\nPolímeros S.A."
+    )
+    mail.send(msg)
+
+    flash(f'Cotización #{id} rechazada correctamente y correo enviado al cliente.', 'success')
+    return redirect(url_for('ver_cotizaciones'))
+
+
 
 
 

@@ -3,26 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <title>Cotizaciones Pendientes</title>
-  <link 
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
-    rel="stylesheet"
-  >
-  <link rel="stylesheet" href="{{ url_for('static', filename='ver_cotizacion.css') }}">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 
 <body class="bg-light">
   <div class="d-flex">
-    <!-- Sidebar -->
     {% include 'sidebar.html' %}
-
-    <!-- Contenido principal -->
     <div class="flex-fill">
-      <!-- Navbar -->
-      {% include 'navbar_admin.html' %}
 
-      <!-- Contenido de la página -->
-      <div class="container mt-5 pending-container">
+      <!-- Barra superior -->
+      <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+          <span class="navbar-brand">Panel Admin</span>
+          <div class="d-flex align-items-center">
+            <a href="{{ url_for('enviar_notificaciones') }}" class="btn text-white me-3">
+              <i class="bi bi-bell" style="font-size: 1.4rem;"></i>
+            </a>
+            <span class="navbar-text text-white me-3">Bienvenido, {{ nombre }}</span>
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Contenido principal -->
+      <div class="container mt-5">
         <h1>Cotizaciones Pendientes</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
         <table class="table table-striped">
           <thead class="table-success">
             <tr>
@@ -42,30 +60,36 @@
             <tr>
               <td>{{ c.id }}</td>
               <td>{{ c.nombre }} {{ c.apellido }}</td>
-              <td>{{ c.longitud }} m</td>
-              <td>{{ c.ancho }} m</td>
-              <td>{{ c.profundidad }} m</td>
+              <td>{{ c.longitud }}</td>
+              <td>{{ c.ancho }}</td>
+              <td>{{ c.profundidad }}</td>
               <td>{{ c.aggrebind | round(2) }}</td>
-              <td>{{ c.agua      | round(2) }}</td>
+              <td>{{ c.agua | round(2) }}</td>
               <td>$ {{ c.total }}</td>
               <td>
-                <!-- Habilitar -->
-                <a href="{{ url_for('habilitar_cotizacion', id=c.id) }}"
-                   class="btn btn-outline-success btn-sm"
-                   onclick="return confirm('¿Habilitar cotización #{{ c.id }}?');">
-                  Habilitar
-                </a>
+                <a href="{{ url_for('habilitar_cotizacion', id=c.id) }}" class="btn btn-outline-success btn-sm" onclick="return confirm('¿Habilitar cotización #{{ c.id }}?');">Habilitar</a>
+                <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalRechazo{{ c.id }}">Rechazar</button>
 
-                <!-- Eliminar -->
-                <form action="{{ url_for('eliminar_cotizacion', id=c.id) }}"
-                      method="post"
-                      style="display:inline;">
-                  <button type="submit"
-                          class="btn btn-outline-danger btn-sm"
-                          onclick="return confirm('¿Eliminar cotización #{{ c.id }}?');">
-                    Eliminar
-                  </button>
-                </form>
+                <!-- Modal de rechazo -->
+                <div class="modal fade" id="modalRechazo{{ c.id }}" tabindex="-1">
+                  <div class="modal-dialog">
+                    <form method="POST" action="{{ url_for('rechazar_cotizacion', id=c.id) }}">
+                      <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                          <h5 class="modal-title">Rechazar Cotización #{{ c.id }}</h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                          <label class="form-label">Motivo del rechazo:</label>
+                          <textarea name="motivo" class="form-control" rows="3" required></textarea>
+                        </div>
+                        <div class="modal-footer">
+                          <button type="submit" class="btn btn-danger">Confirmar Rechazo</button>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </div>
               </td>
             </tr>
             {% else %}
@@ -75,14 +99,19 @@
             {% endfor %}
           </tbody>
         </table>
+
         <div class="mt-4">
-      <a href="{{ url_for('historial_cotizaciones') }}"
-         class="btn btn-secondary">
-        Ver historial de cotizaciones
-      </a>
-    </div>
-            </div>
+          <a href="{{ url_for('historial_cotizaciones') }}" class="btn btn-secondary">Ver historial de cotizaciones</a>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <footer class="bg-dark text-white text-center py-3 mt-5">
+        &copy; 2025 Polímeros S.A. - Panel del Administrador
+      </footer>
     </div>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

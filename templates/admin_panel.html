@@ -3,12 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>Panel del Administrador</title>
-  <link 
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
-    rel="stylesheet"
-  >
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 
   <style>
     :root {
@@ -28,92 +24,23 @@
     }
 
     .navbar {
-    background-color: #212529; /* gris carbón */
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+      background-color: #212529;
+      box-shadow: 0 4px 10px var(--sombra);
     }
 
-    .navbar-brand,
-    .navbar-text {
+    .navbar-brand, .navbar-text {
       font-weight: 600;
       font-size: 1.2rem;
     }
 
-    .card {
-      background: var(--blanco);
-      border-radius: 12px;
-      box-shadow: 0 10px 20px var(--sombra);
-      transition: transform 0.4s ease, box-shadow 0.4s ease;
-      overflow: hidden;
-      position: relative;
-      margin-bottom: 30px;
-      height: 100%;
-    }
-
-    .card:hover {
-      transform: translateY(-10px) scale(1.02);
-      box-shadow: 0 20px 30px var(--sombra);
-    }
-
-    .card::before {
-      content: "";
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: rgba(255, 255, 255, 0.05);
-      transform: rotate(25deg);
-      opacity: 0;
-      transition: opacity 0.5s;
-    }
-
-    .card:hover::before {
-      opacity: 1;
-      animation: shine 2s linear infinite;
-    }
-
-    @keyframes shine {
-      0% { transform: rotate(25deg) translate(-100%, -100%); }
-      100% { transform: rotate(25deg) translate(100%, 100%); }
-    }
-
-    .card-title {
-      color: var(--verde);
-      font-size: 1.5rem;
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-
-    .card-text {
-      font-size: 1rem;
-      color: var(--gris-texto);
-    }
-
-    .btn-gestionar-admins {
-      display: inline-block;
-      padding: 10px 20px;
-      margin-top: 15px;
-      background: var(--verde-gradiente);
-      color: var(--blanco);
-      text-decoration: none;
-      border: none;
-      border-radius: 25px;
-      font-size: 1rem;
-      cursor: pointer;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-      transition: background 0.3s ease, transform 0.2s ease;
-    }
-
-    .btn-gestionar-admins:hover {
-      background: linear-gradient(135deg, var(--verde-hover), #28a745);
-      transform: translateY(-2px);
-    }
-
-    .card-body {
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      height: 100%;
+    .info-admin {
+      font-size: 1.15rem;
+      color: #222;
+      background-color: transparent;
+      padding: 20px;
+      border-left: 4px solid #28a745;
+      margin: 2rem;
+      line-height: 1.6;
     }
 
     footer {
@@ -125,66 +52,50 @@
       padding: 1rem 0;
       margin-top: 40px;
     }
-
-    .badge {
-      font-size: 0.7rem;
-      font-weight: bold;
-    }
-
-    .btn-outline-light {
-      border-radius: 20px;
-      padding: 5px 15px;
-      transition: background 0.3s, color 0.3s;
-    }
-
-    .btn-outline-light:hover {
-      background: var(--blanco);
-      color: var(--verde-hover);
-    }
-
-    .row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
   </style>
 </head>
 
 <body>
-  <!-- Contenedor principal usando Flexbox -->
   <div class="d-flex">
-    <!-- Sidebar -->
     {% include 'sidebar.html' %}
-
-    <!-- Contenido principal -->
     <div class="flex-fill">
 
-      
+      <!-- Barra de navegación -->
       <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-          <span class="navbar-brand">Panel Admin</span>
+  <div class="container-fluid">
+    <span class="navbar-brand">Panel Admin</span>
+    <div class="d-flex align-items-center">
+      <!-- Campanita SIN número -->
+      <a href="{{ url_for('enviar_notificaciones') }}" class="btn text-white me-3">
+        <i class="bi bi-bell" style="font-size: 1.4rem;"></i>
+      </a>
+      <span class="navbar-text text-white me-3">Bienvenido, {{ nombre }}</span>
+      <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
+    </div>
+  </div>
+</nav>
 
-          <div class="d-flex align-items-center">
-            <!-- Botón de campana -->
-            <a href="{{ url_for('enviar_notificaciones') }}" class="btn position-relative text-white me-3">
-              <i class="bi bi-bell" style="font-size: 1.4rem;"></i>
-              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                3
-                <span class="visually-hidden">nuevas notificaciones</span>
-              </span>
-            </a>
 
-            <span class="navbar-text text-white me-3">Bienvenido, {{ nombre }}</span>
-            <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
-          </div>
-        </div>
-      </nav>
+      <!-- Información sobre el rol del admin -->
+      <div class="info-admin">
+        <h4 class="mb-3">¡Bienvenido al panel del administrador!</h4>
+        <p>Desde este panel puedes gestionar todas las funcionalidades clave del sistema:</p>
+        <ul>
+          <li>📋 <strong>Administrar usuarios administradores</strong> (crear y eliminar).</li>
+          <li>📦 <strong>Gestionar el inventario</strong> de polímero AggreBind.</li>
+          <li>💰 <strong>Revisar, aprobar o rechazar cotizaciones</strong> enviadas por los clientes.</li>
+          <li>🚚 <strong>Asignar envíos</strong> a conductores y vehículos disponibles.</li>
+          <li>📨 <strong>Enviar notificaciones</strong> personalizadas a los usuarios.</li>
+          <li>📈 <strong>Generar reportes</strong> en PDF y Excel de cotizaciones, envíos y compras.</li>
+        </ul>
+        <p>Utiliza el menú lateral para acceder a cada sección. ¡Gracias por tu gestión!</p>
+      </div>
 
-      
       <!-- Footer -->
       <footer class="bg-dark text-white text-center py-3">
         &copy; 2025 Polímeros S.A. - Panel del Administrador
       </footer>
+
     </div>
   </div>
 </body>
