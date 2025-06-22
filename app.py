@@ -177,19 +177,17 @@ def compras_pdf():
 def get_db_connection():
     try:
         conn = mysql.connector.connect(
-            host='localhost',
-            port=3306,
-            user='root',
-            password='1234',
-            database='polimero_db'
+            host=os.getenv('DB_HOST'),
+            port=int(os.getenv('DB_PORT', 23787)),
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'),
+            database=os.getenv('DB_NAME')
         )
-        print("✅ Conectado a la base de datos local")
+        print(f"✅ Conectado a base: {os.getenv('DB_NAME')}")
         return conn
     except Error as e:
         print(f"[Error] No se pudo conectar a MySQL: {e}")
         return None
-
-
 
 
 
