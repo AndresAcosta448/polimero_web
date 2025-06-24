@@ -1,0 +1,32 @@
+{% extends 'base_admin.html' %}
+{% block title %}Historial Rechazadas{% endblock %}
+
+{% block content %}
+  <h1>Historial de Cotizaciones Rechazadas</h1>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Cliente</th>
+        <th>Dimensiones</th>
+        <th>Polímero/Agua</th>
+        <th>Total</th>
+        <th>Motivo</th>
+        <th>Fecha</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in cotizaciones %}
+        <tr>
+          <td>{{ c.id }}</td>
+          <td>{{ c.nombre }} {{ c.apellido }}</td>
+          <td>{{ c.longitud }}×{{ c.ancho }}×{{ c.profundidad }} m</td>
+          <td>{{ c.aggrebind }} L / {{ c.agua }} L</td>
+          <td>${{ "{:,.2f}".format(c.total) }}</td>
+          <td>{{ c.motivo_rechazo }}</td>
+          <td>{{ c.fecha.strftime('%Y-%m-%d %H:%M') }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

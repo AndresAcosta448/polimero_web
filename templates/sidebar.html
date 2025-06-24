@@ -9,19 +9,59 @@
 <body>
   <div class="sidebar">
   <h2>Admin Panel</h2>
-  <ul>
-    <li><a href="{{ url_for('admin_panel') }}">Panel Admin</a></li>
-    <li><a href="{{ url_for('gestionar_admins') }}">Administradores registrados</a></li>
-    <li><a href="{{ url_for('ver_cotizaciones') }}">Cotizaciones</a></li>
-    <li><a href="{{ url_for('gestionar_inventario') }}">Gestión de Inventario</a></li>
-    <li><a href="{{ url_for('agregar_vehiculo_route') }}">Agregar Vehículo</a></li>
-    <li><a href="{{ url_for('agregar_conductor_route') }}">Agregar Conductor</a></li>
-    <li><a href="{{ url_for('ordenes_pendientes') }}">Órdenes de envío pendientes</a></li>
-    <li><a href="{{ url_for('envios_asignados') }}">Envíos Asignados</a></li>
-    <li> <a href="{{ url_for('historial_envios') }}"><i class="bi bi-clock-history"></i> Historial de Envíos
-  </a>
-</li>
-  </ul>
+<ul>
+  <li>
+    <a href="{{ url_for('admin_panel') }}">
+      <i class="bi bi-speedometer2"></i> Panel Admin
+    </a>
+  </li>
+  <li>
+    <a href="{{ url_for('gestionar_admins') }}">
+      <i class="bi bi-people"></i> Administradores registrados
+    </a>
+  </li>
+  <li>
+    <a href="{{ url_for('ver_cotizaciones') }}">
+      <i class="bi bi-file-earmark-text"></i> Cotizaciones
+    </a>
+  </li>
+  <li>
+    <a href="{{ url_for('historial_cotizaciones_rechazadas') }}">
+      <i class="bi bi-journal-text"></i>Cotizaciones Rechazadas
+    </a>
+  </li>
+  <li>
+    <a href="{{ url_for('gestionar_inventario') }}">
+      <i class="bi bi-box-seam"></i> Gestión de Inventario
+    </a>
+  </li>
+  <li>
+    <a href="{{ url_for('agregar_vehiculo_route') }}">
+      <i class="bi bi-truck"></i> Agregar Vehículo
+    </a>
+  </li>
+  <li>
+    <a href="{{ url_for('agregar_conductor_route') }}">
+      <i class="bi bi-person-plus"></i> Agregar Conductor
+    </a>
+  </li>
+  <li>
+    <a href="{{ url_for('ordenes_pendientes') }}">
+      <i class="bi bi-hourglass-split"></i> Órdenes de envío pendientes
+    </a>
+  </li>
+  <li>
+    <a href="{{ url_for('envios_asignados') }}">
+      <i class="bi bi-check2-square"></i> Envíos Asignados
+    </a>
+  </li>
+  <li>
+    <a href="{{ url_for('historial_envios') }}">
+      <i class="bi bi-clock-history"></i> Historial de Envíos
+    </a>
+  </li>
+  
+</ul>
 </div>
 </body>
 </html>

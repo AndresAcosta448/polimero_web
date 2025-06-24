@@ -100,6 +100,15 @@ def generar_recibo_simple_bytes(pedido_id, cliente_nombre, fecha, metodo, detall
     return buffer.read()
 
 # ————————————————————————————————————————————————————————————————————————————————————
+
+
+@app.context_processor
+def inyectar_nombre_usuario():
+    return dict(nombre=session.get('nombre'))
+
+
+
+
 @app.route('/admin/reportes/compras/pdf')
 def compras_pdf():
     if session.get('rol') != 'admin':
@@ -291,59 +300,89 @@ def historial_envios():
 #  RUTAS DE CLIENTE (Cotizaciones Habilitadas y Pago)
 # ----------------------------------------------------
 
-@app.route('/rechazar_cotizacion/<int:id>', methods=['POST'])
+@app.route('/admin/rechazar_cotizacion/<int:id>', methods=['POST'])
 def rechazar_cotizacion(id):
+    # 1. Sólo admins
     if session.get('rol') != 'admin':
         flash('Acceso denegado', 'danger')
         return redirect(url_for('login'))
 
     motivo = request.form.get('motivo', '').strip()
     if not motivo:
-        flash('Debes escribir el motivo del rechazo.', 'warning')
+        flash('Debes especificar un motivo de rechazo.', 'danger')
         return redirect(url_for('ver_cotizaciones'))
 
-    # Obtener correo y datos del cliente
     conn = get_db_connection()
     cur  = conn.cursor(dictionary=True)
+
+    # 2. Obtener datos del cliente
     cur.execute("""
         SELECT u.correo, u.nombre, u.apellido
-        FROM cotizaciones c
-        JOIN usuarios u ON c.cliente_id = u.id
-        WHERE c.id = %s
+          FROM cotizaciones c
+          JOIN usuarios u ON c.cliente_id = u.id
+         WHERE c.id = %s
     """, (id,))
     cliente = cur.fetchone()
-
     if not cliente:
         cur.close(); conn.close()
         flash('Cotización no encontrada.', 'danger')
         return redirect(url_for('ver_cotizaciones'))
 
-    # Eliminar cotización
-    cur.execute("DELETE FROM cotizaciones WHERE id = %s", (id,))
+    # 3. Marcar como rechazada y guardar motivo
+    cur.execute("""
+        UPDATE cotizaciones
+           SET rechazada = TRUE,
+               motivo_rechazo = %s
+         WHERE id = %s
+    """, (motivo, id))
     conn.commit()
     cur.close()
     conn.close()
 
-    # Enviar correo con motivo del rechazo
+    # 4. Enviar correo al cliente
     msg = Message(
-        subject="Cotización Rechazada - Polímeros S.A.",
+        subject="Cotización Rechazada – Polímeros S.A.",
         recipients=[cliente['correo']]
     )
     msg.body = (
         f"Hola {cliente['nombre']} {cliente['apellido']},\n\n"
         f"Tu cotización #{id} ha sido rechazada por el siguiente motivo:\n\n"
         f"{motivo}\n\n"
-        "Puedes realizar una nueva solicitud cuando desees.\n\n"
-        "Atentamente,\nPolímeros S.A."
+        "Si lo deseas, puedes realizar una nueva solicitud en cualquier momento.\n\n"
+        "Atentamente,\n"
+        "Polímeros S.A."
     )
     mail.send(msg)
 
-    flash(f'Cotización #{id} rechazada correctamente y correo enviado al cliente.', 'success')
+    flash(f'Cotización #{id} marcada como rechazada y correo enviado.', 'success')
     return redirect(url_for('ver_cotizaciones'))
 
 
+@app.route('/admin/historial_cotizaciones_rechazadas')
+def historial_cotizaciones_rechazadas():
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
 
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute("""
+      SELECT c.id, u.nombre, u.apellido,
+             c.longitud, c.ancho, c.profundidad,
+             c.aggrebind, c.agua, c.total,
+             c.motivo_rechazo, c.fecha
+        FROM cotizaciones c
+        JOIN usuarios u ON c.cliente_id = u.id
+       WHERE c.rechazada = TRUE
+       ORDER BY c.fecha DESC
+    """)
+    cotizaciones = cur.fetchall()
+    cur.close()
+    conn.close()
 
+    return render_template(
+      'historial_cotizaciones_rechazadas.html',
+      cotizaciones=cotizaciones
+    )
 
 @app.route('/cliente/cotizaciones_habilitadas')
 def cotizaciones_habilitadas_cliente():
@@ -1117,7 +1156,7 @@ def envios_en_curso():
 def ordenes_pendientes():
     if session.get('rol')!='admin': return redirect(url_for('login'))
     ordenes=listar_ordenes_pendientes()
-    return render_template('admin/ordenes_pendientes.html', ordenes=ordenes, nombre=session.get('usuario_nombre'))
+    return render_template('admin/ordenes_pendientes.html', ordenes=ordenes)
 
 
 @app.route('/admin/envios_asignados', methods=['GET', 'POST'])
@@ -1572,7 +1611,9 @@ def login():
         session['nombre']     = usuario['nombre']
         session['rol']        = usuario['rol']
         if usuario['rol'] == 'admin':
-            return redirect(url_for('admin_panel'))
+         session['nombre'] = usuario['nombre']  # <- Esto es clave
+         return redirect(url_for('admin_panel'))
+
         return redirect(url_for('calculadora'))
 
     return render_template('login.html')
@@ -2085,14 +2126,14 @@ def ver_cotizaciones():
         FROM cotizaciones c
         JOIN usuarios u ON c.cliente_id = u.id
        WHERE c.habilitado = FALSE
+         AND c.rechazada  = FALSE
     ORDER BY c.id DESC
     """)
-    all_cots = cur.fetchall()
+    cotizaciones = cur.fetchall()
     cur.close()
     conn.close()
 
-    return render_template('ver_cotizaciones.html', cotizaciones=all_cots)
-
+    return render_template('ver_cotizaciones.html', cotizaciones=cotizaciones)
 @app.route('/habilitar_cotizacion/<int:id>')
 def habilitar_cotizacion(id):
     # Sólo admin puede
@@ -2267,3 +2308,27 @@ if __name__ == '__main__':
     # Descomenta la siguiente línea la primera vez para crear las tablas de Envíos:
     # crear_tablas()
     app.run(debug=True)
+
+
+
+
+#-----------nombre login ----------------------
+
+@app.route('/gestionar_admins', methods=['GET', 'POST'])
+def gestionar_admins():
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        correo = request.form['correo']
+        contrasena = request.form['contrasena']
+        hash_pw = generate_password_hash(contrasena)
+        cur.execute("INSERT INTO administradores (nombre, correo, contrasena) VALUES (%s, %s, %s)", (nombre, correo, hash_pw))
+        conn.commit()
+
+    cur.execute("SELECT * FROM administradores")
+    admins = cur.fetchall()
+    conn.close()
+
+    return render_template('gestionar_admins.html', admins=admins, nombre=session.get('nombre'))
