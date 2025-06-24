@@ -1,14 +1,15 @@
 .sidebar {
   width: 230px;
-  min-height: 100vh;
   background: linear-gradient(135deg, #6e6c6e, #0a0a0a);
   color: #fff;
   padding: 1rem;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
-  height: 100vh;
-  position: relative;
+  position: static; /* ← que no sea fija */
+  height: auto;      /* ← que crezca con el contenido */
+  min-height: 100%;
 }
+
 
 .sidebar h2 {
   font-size: 1.2rem;

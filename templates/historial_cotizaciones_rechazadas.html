@@ -1,0 +1,24 @@
+{% extends 'base_admin.html' %}
+{% block title %}Historial Rechazadas{% endblock %}
+
+{% block content %}
+  <h1>Historial de Cotizaciones Rechazadas</h1>
+<table class="table">
+  <thead>…</thead>
+  <tbody>
+    {% for c in cotizaciones %}
+      <tr>
+        <td>{{ c.id }}</td>
+        <td>{{ c.nombre }} {{ c.apellido }}</td>
+        <td>${{ "{:,.2f}".format(c.total) }}</td>
+        <td>{{ c.motivo_rechazo }}</td>
+        <td>{{ c.fecha.strftime('%Y-%m-%d %H:%M') }}</td>
+      </tr>
+    {% else %}
+      <tr>
+        <td colspan="5" class="text-center">No hay cotizaciones rechazadas.</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

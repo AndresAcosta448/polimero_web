@@ -4,41 +4,188 @@
   <meta charset="UTF-8">
   <title>Confirmación de Pago</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="{{ url_for('static', filename='estilos_cliente.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Segoe UI', sans-serif; background: #f9f9f9; padding: 2rem; }
-    .contenedor { max-width: 600px; margin: auto; background: #fff; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    h1 { color: #28a745; margin-bottom: 1rem; }
-    p { margin: 0.5rem 0; color: #555; }
-    .destacado { font-weight: bold; color: #333; }
-    .boton-volver { 
-      display: inline-block; 
-      margin-top: 1.5rem; 
-      padding: 0.6rem 1.2rem; 
-      background: #28a745; 
-      color: #fff; 
-      text-decoration: none; 
-      border-radius: 4px; 
-      transition: background 0.3s; 
+    :root {
+      --verde: #28a745;
+      --verde-hover: #218838;
+      --blanco: #fff;
+      --fondo-gris: rgba(255, 255, 255, 0.95);
+      --radio: 10px;
+      --fuente: "Quicksand", sans-serif;
     }
-    .boton-volver:hover { background: #218838; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--fuente);
+      background-image: url('{{ url_for('static', filename='imagenes/352993-admin.jpg') }}');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      padding-top: 6rem;
+    }
+
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4.8rem;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem 0 3rem;
+      z-index: 1000;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .nav .logo img {
+      height: 50px;
+      margin-left: 1.5rem;
+    }
+
+    .nav .main_list ul {
+      list-style: none;
+      display: flex;
+      gap: 0.8rem;
+      margin: 0;
+      padding: 0;
+    }
+
+    .nav .main_list ul li a {
+      background-color: var(--verde);
+      color: white;
+      padding: 0.4rem 1rem;
+      font-size: 1.2rem;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: background 0.3s ease;
+    }
+
+    .nav .main_list ul li a:hover {
+      background-color: var(--verde-hover);
+    }
+
+    .contenedor {
+      max-width: 650px;
+      margin: auto;
+      background: var(--fondo-gris);
+      padding: 2.5rem;
+      border-radius: var(--radio);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    h1 {
+      color: var(--verde);
+      text-align: center;
+      font-size: 2.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    p {
+      font-size: 1.4rem;
+      margin: 0.6rem 0;
+      color: #444;
+    }
+
+    .destacado {
+      font-weight: bold;
+      color: #000;
+    }
+
+    hr {
+      margin: 1.5rem 0;
+      border: none;
+      border-top: 1px solid #ccc;
+    }
+
+    .boton-volver {
+      display: inline-block;
+      margin-top: 1.5rem;
+      padding: 0.8rem 1.5rem;
+      background: var(--verde);
+      color: var(--blanco);
+      text-decoration: none;
+      border-radius: 0.6rem;
+      font-size: 1.4rem;
+      font-weight: 600;
+      transition: background 0.3s ease;
+    }
+
+    .boton-volver:hover {
+      background: var(--verde-hover);
+    }
+
+    @media (max-width: 600px) {
+      .nav .main_list ul li a {
+        font-size: 1rem;
+        padding: 0.4rem 0.8rem;
+      }
+
+      .nav {
+        height: 4.5rem;
+        padding: 0 1rem;
+      }
+
+      .nav .logo img {
+        height: 40px;
+        margin-left: 0.5rem;
+      }
+
+      .contenedor {
+        margin: 2rem 1rem;
+        padding: 2rem;
+      }
+
+      h1 {
+        font-size: 1.8rem;
+      }
+
+      p {
+        font-size: 1.2rem;
+      }
+    }
   </style>
 </head>
 <body>
+
+  <!-- Barra de navegación -->
+  <nav class="nav">
+    <div class="logo">
+      <img src="{{ url_for('static', filename='imagenes/AggreBind-White-logo (1).png') }}" alt="AggreBind Logo">
+    </div>
+    <div class="main_list">
+      <ul>
+        <li><a href="{{ url_for('notificaciones') }}">Notificaciones</a></li>
+        <li><a href="{{ url_for('mis_cotizaciones_pendientes') }}">Cotizaciones Pendientes</a></li>
+        <li><a href="{{ url_for('cotizaciones_habilitadas_cliente') }}">Cotizaciones para Pago</a></li>
+        <li><a href="{{ url_for('logout') }}">Cerrar sesión</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Contenido -->
   <div class="contenedor">
     <h1>¡Compra Realizada con Éxito!</h1>
     <p>Hola <span class="destacado">{{ nombre_cliente }}</span>,</p>
     <p>Tu compra correspondiente a la <span class="destacado">cotización #{{ cot_id }}</span> se ha completado.</p>
+
     <hr>
+
     <p><span class="destacado">Monto pagado:</span> ${{ "%.2f"|format(monto) }}</p>
     <p><span class="destacado">Método de pago:</span> {{ metodo }} ({{ detalle_pago }})</p>
     <p><span class="destacado">Dirección de envío:</span> {{ direccion }}</p>
+
     <hr>
+
     <p>Un administrador coordinará el envío del polímero a la brevedad.</p>
     <p>Revisa tu correo electrónico para más detalles.</p>
-            <a class="boton-volver" href="{{ url_for('calculadora') }}">
-      ← Volver
-    </a>
+
+    <a class="boton-volver" href="{{ url_for('calculadora') }}">← Volver</a>
   </div>
+
 </body>
 </html>

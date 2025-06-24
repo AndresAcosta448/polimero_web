@@ -1,35 +1,41 @@
 <!-- gestionar_inventario.html -->
 
+<!-- gestionar_inventario.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <title>Gestión de Inventario</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- DataTables CSS -->
-  <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 
-  <!-- CSS personalizado -->
+  <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='gestionar_inventario.css') }}">
 </head>
 <body>
-
   <div class="d-flex">
     {% include 'sidebar.html' %}
     <div class="flex-fill p-4">
 
-
-<nav class="navbar navbar-dark bg-dark sticky-top mb-4">
-    <div class="container-fluid">
-      <span class="navbar-brand">Panel Admin</span>
-      <div class="d-flex align-items-center">
-      <span class="navbar-text text-white me-3">Bienvenido, {{ nombre }}</span>        <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
-      </div>
+      <!-- Barra superior -->
+      <nav class="navbar navbar-dark bg-dark sticky-top mb-4">
+  <div class="container-fluid">
+    <span class="navbar-brand">Panel Admin</span>
+    <div class="d-flex align-items-center">
+      <!-- Campanita de notificaciones sin número -->
+      <a href="{{ url_for('enviar_notificaciones') }}" class="btn text-white me-3">
+        <i class="bi bi-bell" style="font-size: 1.4rem;"></i>
+      </a>
+      <span class="navbar-text text-white me-3">Bienvenido, {{ nombre }}</span>
+      <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
     </div>
-  </nav>
+  </div>
+</nav>
+
+
+      <!-- Resto del contenido igual... -->
+      <!-- No modifiques el resto, solo asegúrate de que {{ nombre }} se usa correctamente -->
 
       <h1 class="mb-3 text-success">Gestión de Inventario AggreBind</h1>
 
