@@ -2308,27 +2308,3 @@ if __name__ == '__main__':
     # Descomenta la siguiente línea la primera vez para crear las tablas de Envíos:
     # crear_tablas()
     app.run(debug=True)
-
-
-
-
-#-----------nombre login ----------------------
-
-@app.route('/gestionar_admins', methods=['GET', 'POST'])
-def gestionar_admins():
-    conn = get_db_connection()
-    cur = conn.cursor(dictionary=True)
-
-    if request.method == 'POST':
-        nombre = request.form['nombre']
-        correo = request.form['correo']
-        contrasena = request.form['contrasena']
-        hash_pw = generate_password_hash(contrasena)
-        cur.execute("INSERT INTO administradores (nombre, correo, contrasena) VALUES (%s, %s, %s)", (nombre, correo, hash_pw))
-        conn.commit()
-
-    cur.execute("SELECT * FROM administradores")
-    admins = cur.fetchall()
-    conn.close()
-
-    return render_template('gestionar_admins.html', admins=admins, nombre=session.get('nombre'))
