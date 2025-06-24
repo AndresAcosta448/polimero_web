@@ -186,15 +186,15 @@ def compras_pdf():
 def get_db_connection():
     try:
         conn = mysql.connector.connect(
-            host=os.getenv('DB_HOST'),
-            port=int(os.getenv('DB_PORT', 23787)),
-            user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD'),
-            database=os.getenv('DB_NAME')
+            host     = os.getenv("MYSQL_HOST"),
+            port     = int(os.getenv("MYSQL_PORT", 3306)),
+            user     = os.getenv("MYSQL_USER"),
+            password = os.getenv("MYSQL_PASSWORD"),
+            database = os.getenv("MYSQL_DB")
         )
-        print(f"✅ Conectado a base: {os.getenv('DB_NAME')}")
+        print("✅ Conectado a la base de datos de Railway")
         return conn
-    except Error as e:
+    except mysql.connector.Error as e:
         print(f"[Error] No se pudo conectar a MySQL: {e}")
         return None
 
@@ -2308,3 +2308,4 @@ if __name__ == '__main__':
     # Descomenta la siguiente línea la primera vez para crear las tablas de Envíos:
     # crear_tablas()
     app.run(debug=True)
+
