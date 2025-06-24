@@ -162,7 +162,7 @@ th, td {
 }
 
 tbody tr:nth-child(even) {
-  background-color: #f0f7f0;
+  background-color: #070707;
 }
 
 tbody tr:hover {

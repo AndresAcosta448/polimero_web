@@ -191,8 +191,9 @@ def get_db_connection():
             user=os.getenv('DB_USER'),
             password=os.getenv('DB_PASSWORD'),
             database=os.getenv('DB_NAME')
+
         )
-        print(f"✅ Conectado a base: {os.getenv('DB_NAME')}")
+        print("✅ Conectado a la base de datos local")
         return conn
     except Error as e:
         print(f"[Error] No se pudo conectar a MySQL: {e}")
@@ -301,22 +302,35 @@ def historial_envios():
 # ----------------------------------------------------
 @app.route('/admin/historial_cotizaciones_rechazadas')
 def historial_cotizaciones_rechazadas():
-    # … validación de admin …
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
+
     conn = get_db_connection()
     cur  = conn.cursor(dictionary=True)
     cur.execute("""
-      SELECT c.id, u.nombre, u.apellido,
-             c.total, c.motivo_rechazo, c.fecha
-        FROM cotizaciones c
-        JOIN usuarios u ON c.cliente_id = u.id
-       WHERE c.rechazada = 1
-       ORDER BY c.fecha DESC
+      SELECT
+        c.id,
+        u.nombre,
+        u.apellido,
+        c.longitud,
+        c.ancho,
+        c.profundidad,
+        c.aggrebind,
+        c.agua,
+        c.total,
+        c.motivo_rechazo,
+        c.fecha
+      FROM cotizaciones c
+      JOIN usuarios u ON c.cliente_id = u.id
+      WHERE c.rechazada = 1
+      ORDER BY c.fecha DESC
     """)
-    cotizaciones = cur.fetchall()   # <-- aquí, fetchall
-    cur.close(); conn.close()
+    cotizaciones = cur.fetchall()
+    cur.close()
+    conn.close()
 
-    # DEBUG:  
-    print(f"[DEBUG] rechazadas: {len(cotizaciones)}")  
+    # DEBUG:
+    print(f"[DEBUG] rechazadas: {len(cotizaciones)}")
 
     return render_template(
       'historial_cotizaciones_rechazadas.html',
@@ -337,9 +351,9 @@ def rechazar_cotizacion(id):
         return redirect(url_for('ver_cotizaciones'))
 
     conn = get_db_connection()
-    cur = conn.cursor(dictionary=True)
+    cur  = conn.cursor(dictionary=True)
 
-    # 3. Traer datos del cliente
+    # 3. Obtener datos del cliente
     cur.execute("""
         SELECT u.correo, u.nombre, u.apellido
           FROM cotizaciones c
@@ -356,7 +370,7 @@ def rechazar_cotizacion(id):
     # 4. Marcar como rechazada y guardar motivo
     cur.execute("""
         UPDATE cotizaciones
-           SET rechazada      = TRUE,
+           SET rechazada      = 1,
                motivo_rechazo = %s
          WHERE id = %s
     """, (motivo, id))
@@ -382,9 +396,78 @@ def rechazar_cotizacion(id):
     flash(f'Cotización #{id} marcada como rechazada y correo enviado.', 'success')
     return redirect(url_for('ver_cotizaciones'))
 
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+
+    # 2. Obtener datos del cliente
+    cur.execute("""
+        SELECT u.correo, u.nombre, u.apellido
+          FROM cotizaciones c
+          JOIN usuarios u ON c.cliente_id = u.id
+         WHERE c.id = %s
+    """, (id,))
+    cliente = cur.fetchone()
+    if not cliente:
+        cur.close()
+        conn.close()
+        flash('Cotización no encontrada.', 'danger')
+        return redirect(url_for('ver_cotizaciones'))
+
+    # 3. Marcar como rechazada y guardar motivo
+    cur.execute("""
+        UPDATE cotizaciones
+           SET rechazada = TRUE,
+>>>>>>> 5ea3b57e3d9b4bcf9fcdea0cc50bca8baa07ed97
+               motivo_rechazo = %s
+         WHERE id = %s
+    """, (motivo, id))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    msg = Message(
+        subject="Cotización Rechazada – Polímeros S.A.",
+        recipients=[cliente['correo']]
+    )
+    msg.body = (
+        f"Hola {cliente['nombre']} {cliente['apellido']},\n\n"
+        f"Tu cotización #{id} ha sido rechazada por el siguiente motivo:\n\n"
+        f"{motivo}\n\n"
+        "Si lo deseas, puedes realizar una nueva solicitud en cualquier momento.\n\n"
+        "Atentamente,\n"
+        "Polímeros S.A."
+    )
+    mail.send(msg)
+
+    flash(f'Cotización #{id} marcada como rechazada y correo enviado.', 'success')
+    return redirect(url_for('ver_cotizaciones'))
 
 
+@app.route('/admin/historial_cotizaciones_rechazadas')
+def historial_cotizaciones_rechazadas():
+    if session.get('rol') != 'admin':
+        return redirect(url_for('login'))
 
+    conn = get_db_connection()
+    cur  = conn.cursor(dictionary=True)
+    cur.execute("""
+      SELECT c.id, u.nombre, u.apellido,
+             c.longitud, c.ancho, c.profundidad,
+             c.aggrebind, c.agua, c.total,
+             c.motivo_rechazo, c.fecha
+        FROM cotizaciones c
+        JOIN usuarios u ON c.cliente_id = u.id
+       WHERE c.rechazada = TRUE
+       ORDER BY c.fecha DESC
+    """)
+    cotizaciones = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return render_template(
+      'historial_cotizaciones_rechazadas.html',
+      cotizaciones=cotizaciones
+    )
 
 
 @app.route('/cliente/cotizaciones_habilitadas')
@@ -2138,8 +2221,6 @@ def ver_cotizaciones():
     conn.close()
 
     return render_template('ver_cotizaciones.html', cotizaciones=cotizaciones)
-
-
 @app.route('/habilitar_cotizacion/<int:id>')
 def habilitar_cotizacion(id):
     # Sólo admin puede
