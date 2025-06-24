@@ -1595,9 +1595,9 @@ app.config.update(
     MAIL_SERVER='smtp.gmail.com',
     MAIL_PORT=587,
     MAIL_USE_TLS=True,
-    MAIL_USERNAME='pipecifuentes204@gmail.com',
-    MAIL_PASSWORD='cinlwepiphhrmpaz',
-    MAIL_DEFAULT_SENDER='pipecifuentes204@gmail.com'
+    MAIL_USERNAME='agreebind@gmail.com',
+    MAIL_PASSWORD='fbkkjzxlolbisuns',
+    MAIL_DEFAULT_SENDER='agreebind@gmail.com'
 )
 mail = Mail(app)
 
