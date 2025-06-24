@@ -300,42 +300,7 @@ def historial_envios():
 # ----------------------------------------------------
 #  RUTAS DE CLIENTE (Cotizaciones Habilitadas y Pago)
 # ----------------------------------------------------
-@app.route('/admin/historial_cotizaciones_rechazadas')
-def historial_cotizaciones_rechazadas():
-    if session.get('rol') != 'admin':
-        return redirect(url_for('login'))
 
-    conn = get_db_connection()
-    cur  = conn.cursor(dictionary=True)
-    cur.execute("""
-      SELECT
-        c.id,
-        u.nombre,
-        u.apellido,
-        c.longitud,
-        c.ancho,
-        c.profundidad,
-        c.aggrebind,
-        c.agua,
-        c.total,
-        c.motivo_rechazo,
-        c.fecha
-      FROM cotizaciones c
-      JOIN usuarios u ON c.cliente_id = u.id
-      WHERE c.rechazada = 1
-      ORDER BY c.fecha DESC
-    """)
-    cotizaciones = cur.fetchall()
-    cur.close()
-    conn.close()
-
-    # DEBUG:
-    print(f"[DEBUG] rechazadas: {len(cotizaciones)}")
-
-    return render_template(
-      'historial_cotizaciones_rechazadas.html',
-      cotizaciones=cotizaciones
-    )
 
 @app.route('/admin/rechazar_cotizacion/<int:id>', methods=['POST'])
 def rechazar_cotizacion(id):
@@ -451,18 +416,29 @@ def historial_cotizaciones_rechazadas():
     conn = get_db_connection()
     cur  = conn.cursor(dictionary=True)
     cur.execute("""
-      SELECT c.id, u.nombre, u.apellido,
-             c.longitud, c.ancho, c.profundidad,
-             c.aggrebind, c.agua, c.total,
-             c.motivo_rechazo, c.fecha
-        FROM cotizaciones c
-        JOIN usuarios u ON c.cliente_id = u.id
-       WHERE c.rechazada = TRUE
-       ORDER BY c.fecha DESC
+      SELECT
+        c.id,
+        u.nombre,
+        u.apellido,
+        c.longitud,
+        c.ancho,
+        c.profundidad,
+        c.aggrebind,
+        c.agua,
+        c.total,
+        c.motivo_rechazo,
+        c.fecha
+      FROM cotizaciones c
+      JOIN usuarios u ON c.cliente_id = u.id
+      WHERE c.rechazada = TRUE
+      ORDER BY c.fecha DESC
     """)
     cotizaciones = cur.fetchall()
     cur.close()
     conn.close()
+
+    # DEBUG: muestra en consola cuántas encontró
+    print(f"[DEBUG] rechazadas: {len(cotizaciones)}")
 
     return render_template(
       'historial_cotizaciones_rechazadas.html',
