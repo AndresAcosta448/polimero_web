@@ -45,6 +45,25 @@
       pointer-events: none;
       cursor: default;
     }
+    /* Diseño específico para el botón de orden */
+  #toggleOrden { /* … tu código … */ }
+  #toggleOrden:hover { /* … */ }
+  #toggleOrden:active { /* … */ }
+
+  /* 1) Evito que los th reciban clicks, pero dejo el orden programático */
+  #tablaCotizaciones thead th {
+    pointer-events: none;
+    cursor: default;
+  }
+
+  /* ==== ANULAMOS EL COLOR BLANCO EN HOVER ==== */
+  #tablaCotizaciones.dataTable tbody tr:hover td {
+    color: #141414 !important;
+  }
+  /* (Opcional) Ajusta fondo al pasar el cursor */
+  #tablaCotizaciones.dataTable tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+  }
   </style>
 </head>
 <body>

@@ -191,9 +191,8 @@ def get_db_connection():
             user=os.getenv('DB_USER'),
             password=os.getenv('DB_PASSWORD'),
             database=os.getenv('DB_NAME')
-
         )
-        print("✅ Conectado a la base de datos local")
+        print(f"✅ Conectado a base: {os.getenv('DB_NAME')}")
         return conn
     except Error as e:
         print(f"[Error] No se pudo conectar a MySQL: {e}")
@@ -1223,53 +1222,68 @@ def ordenes_pendientes():
 
 @app.route('/admin/envios_asignados', methods=['GET', 'POST'])
 def envios_asignados():
-    # 0) Control de acceso
+    # 0) Control de acceso: sólo admin
     if session.get('rol') != 'admin':
         return redirect(url_for('login'))
 
-    # 1) Conexión
+    # 1) Conexión a BD
     conn = get_db_connection()
     cur  = conn.cursor(dictionary=True)
 
-    # 2) Si vienen datos por POST, actualizamos estados, liberamos vehículo, notificamos...
+    # 2) Si viene POST, actualizamos estado, liberamos recursos y notificamos
     if request.method == 'POST':
         envio_id     = request.form['envio_id']
         nuevo_estado = request.form['estado_envio']
 
         if nuevo_estado == 'Entregado':
-            # 2.1) Liberar vehículo leyendo desde ordenes
-            cur.execute("SELECT vehiculo_id FROM ordenes WHERE id = %s", (envio_id,))
+            # 2.1) Liberar vehículo
+            cur.execute(
+                "SELECT vehiculo_id, conductor_id FROM ordenes WHERE id = %s",
+                (envio_id,)
+            )
             fila = cur.fetchone()
-            if fila and fila['vehiculo_id']:
-                cur.execute(
-                    "UPDATE vehiculos SET disponible = 1 WHERE id = %s",
-                    (fila['vehiculo_id'],)
-                )
+            if fila:
+                vehiculo_id  = fila.get('vehiculo_id')
+                conductor_id = fila.get('conductor_id')
 
-            # 2.2) Marcar entrega en envios (para el historial si lo usas)
+                if vehiculo_id:
+                    cur.execute(
+                        "UPDATE vehiculos SET disponible = 1 WHERE id = %s",
+                        (vehiculo_id,)
+                    )
+
+                # 2.1.1) Liberar conductor
+                 # — Aquí quitamos la liberación por campo disponible —
+    # if conductor_id:
+    #     cur.execute(
+    #         "UPDATE conductores SET disponible = 1 WHERE id = %s",
+    #         (conductor_id,)
+    #     )
+
+
+            # 2.2) Marcar entrega en envios y desvincular conductor
             cur.execute("""
                 UPDATE envios
                    SET estado       = %s,
-                       fecha_entrega = NOW()
+                       fecha_entrega = NOW(),
+                       conductor_id  = NULL
                  WHERE id = %s
             """, (nuevo_estado, envio_id))
 
-            # 2.3) Notificaciones: interna y por correo
+            # 2.3) Notificaciones (interna + correo)
             cur.execute("SELECT cliente_id FROM ordenes WHERE id = %s", (envio_id,))
             fila_cli = cur.fetchone()
-            if fila_cli and fila_cli['cliente_id']:
+            if fila_cli and fila_cli.get('cliente_id'):
                 cliente_id = fila_cli['cliente_id']
-
-                # 2.3.1) Notificación interna
+                # 2.3.1) Interna
                 mensaje_notif = "Tu pedido ha sido entregado con éxito. ¡Gracias por confiar en nosotros!"
                 cur.execute(
                     "INSERT INTO notificaciones (usuario_id, mensaje, fecha) VALUES (%s, %s, NOW())",
                     (cliente_id, mensaje_notif)
                 )
-
-                # 2.3.2) Correo al cliente
+                # 2.3.2) Correo
                 cur.execute("SELECT correo FROM usuarios WHERE id = %s", (cliente_id,))
-                correo = cur.fetchone()['correo']
+                correo = cur.fetchone().get('correo')
                 msg = Message(
                     subject="Pedido entregado ✔",
                     recipients=[correo]
@@ -1282,35 +1296,50 @@ def envios_asignados():
                 )
                 mail.send(msg)
 
-        # 2.4) Siempre sincronizamos la tabla ordenes
-        cur.execute("""
-            UPDATE ordenes
-               SET estado_envio = %s
-             WHERE id = %s
-        """, (nuevo_estado, envio_id))
+            # 2.4) Sincronizar tabla ordenes: estado y desvinculación de conductor
+            cur.execute("""
+                UPDATE ordenes
+                   SET estado_envio = %s,
+                       conductor_id = NULL
+                 WHERE id = %s
+            """, (nuevo_estado, envio_id))
+
+        else:
+            # Para otros estados (Pendiente, En ruta, En curso...)
+            cur.execute("""
+                UPDATE ordenes
+                   SET estado_envio = %s
+                 WHERE id = %s
+            """, (nuevo_estado, envio_id))
+            cur.execute("""
+                UPDATE envios
+                   SET estado = %s
+                 WHERE id = %s
+            """, (nuevo_estado, envio_id))
 
         conn.commit()
-        flash("Estado del envío actualizado correctamente", "success")
+        flash("✅ Estado del envío actualizado correctamente.", "success")
 
-    # 3) Cargamos para mostrar los envíos aún activos
+    # 3) Cargar envíos activos (Pendiente, En ruta, En curso)
     cur.execute("""
         SELECT o.id,
                u.nombre, u.apellido,
                o.direccion_envio, o.estado_envio,
                v.placa, c.nombre AS conductor
           FROM ordenes o
-          JOIN usuarios u    ON o.cliente_id  = u.id
-          JOIN vehiculos v   ON o.vehiculo_id = v.id
+          JOIN usuarios u    ON o.cliente_id   = u.id
+          JOIN vehiculos v   ON o.vehiculo_id  = v.id
           JOIN conductores c ON o.conductor_id = c.id
          WHERE o.estado_envio IN ('Pendiente','En ruta','En curso')
          ORDER BY o.fecha_creacion DESC
     """)
     envios = cur.fetchall()
 
-    # 4) Cerramos conexión y devolvemos la plantilla
+    # 4) Cerrar conexión y renderizar vista
     cur.close()
     conn.close()
     return render_template('admin/envios_asignados.html', envios=envios)
+
 @app.route('/admin/historial_cotizaciones')
 def historial_cotizaciones():
     if session.get('rol') != 'admin':
@@ -1562,26 +1591,44 @@ def eliminar_conductor_route():
         return redirect(url_for("agregar_conductor_route"))
 
     conn = get_db_connection()
-    cur = conn.cursor(dictionary=True)
+    cur = conn.cursor()
 
     try:
-        # ¿Está asignado a algún envío activo?
-        cur.execute("""
-            SELECT COUNT(*) AS total FROM envios
-            WHERE conductor_id = %s AND estado IN ('Pendiente', 'En ruta')
-        """, (conductor_id,))
-        if cur.fetchone()["total"] > 0:
-            flash("❌ No se puede eliminar: el conductor está asignado a un envío activo.", "danger")
+        # 1) Contar asignaciones en envios (cualquier estado)
+        cur.execute(
+            "SELECT COUNT(*) FROM envios WHERE conductor_id = %s",
+            (conductor_id,)
+        )
+        total_envios = cur.fetchone()[0]
+
+        # 2) Contar asignaciones en ordenes (si usas ordenes para asignar conductor)
+        cur.execute(
+            "SELECT COUNT(*) FROM ordenes WHERE conductor_id = %s",
+            (conductor_id,)
+        )
+        total_ordenes = cur.fetchone()[0]
+
+        if total_envios + total_ordenes > 0:
+            flash(
+                "❌ No se puede eliminar: el conductor está asignado a " +
+                f"{total_ordenes} orden.",
+                "danger"
+            )
         else:
             cur.execute("DELETE FROM conductores WHERE id = %s", (conductor_id,))
             conn.commit()
             flash("✅ Conductor eliminado correctamente.", "success")
-    except:
+
+    except Error as e:
+        print(f"[Error al eliminar conductor]: {e}")
         flash("⚠️ Error al eliminar el conductor.", "danger")
+
     finally:
-        cur.close(); conn.close()
+        cur.close()
+        conn.close()
 
     return redirect(url_for("agregar_conductor_route"))
+
 
 
 
